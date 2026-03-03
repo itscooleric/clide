@@ -80,6 +80,10 @@ Your project is mounted at `/workspace` inside the container.
 ### Bernard/Forge deployment
 See [`DEPLOY.md`](./DEPLOY.md) for Caddy Docker Proxy integration. Uses `docker-compose.override.yml` (gitignored) for reverse proxy config that persists across git pulls.
 
+## Project Review
+
+For a practical assessment of documentation gaps, capability roadmap (including optional Codex integration), security hardening priorities, and lightweight memory/context recommendations, see [`REVIEW.md`](./REVIEW.md).
+
 ## Notes
 
 - Tokens don't expire unless you set an expiry — set them once in `.env` and you're done.
