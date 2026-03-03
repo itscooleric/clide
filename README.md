@@ -21,13 +21,13 @@ Dockerized CLI toolkit with [GitHub Copilot CLI](https://github.com/github/copil
 ## Setup
 
 1. Add your GitHub token to `.env` (add `ANTHROPIC_API_KEY` only if using Claude Code):
-   ```
+   ```env
    GH_TOKEN=your_github_pat_here
    # ANTHROPIC_API_KEY=your_anthropic_key_here  # optional
    ```
 
 2. (Optional) Enable web terminal authentication:
-   ```
+   ```env
    TTYD_USER=admin
    TTYD_PASS=changeme
    ```

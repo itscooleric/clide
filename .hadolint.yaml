@@ -1,0 +1,3 @@
+ignore:
+  - DL3008  # apt-get version pinning — base tools from official repos, acceptable unpinned
+  - DL3016  # npm version pinning — claude-code and copilot-cli track latest intentionally
