@@ -27,8 +27,9 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && rm -rf /var/lib/apt/lists/*
 
 # Install ttyd 1.7.7 for web terminal access (pinned — avoid /latest/ surprises)
-RUN curl -fsSL https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.$(uname -m) \
-    -o /usr/local/bin/ttyd \
+RUN ARCH="$(uname -m)" \
+    && curl -fsSL "https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.${ARCH}" \
+       -o /usr/local/bin/ttyd \
     && chmod +x /usr/local/bin/ttyd
 
 # Install Claude Code CLI (unpinned — tracks new features intentionally)

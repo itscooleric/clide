@@ -18,12 +18,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: hadolint/hadolint-action@v3.1.0
+        with:
+          config: .hadolint.yaml
 
   compose-validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: docker compose config --quiet
+      - run: cp .env.example .env && docker compose config --quiet
 
   markdown-lint:
     runs-on: ubuntu-latest
