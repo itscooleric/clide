@@ -1,0 +1,46 @@
+x-base: &base
+  build: .
+  image: clide
+  env_file: .env
+  volumes:
+    - ${PROJECT_DIR:-..}:/workspace
+  stdin_open: true
+  tty: true
+
+networks:
+  caddy:
+    external: true
+    # Only used when service explicitly joins it
+
+services:
+  # Web terminal (ttyd) - access all CLIs via browser
+  web:
+    <<: *base
+    entrypoint: ["/usr/local/bin/entrypoint.sh"]
+    command: []
+    ports:
+      - "${TTYD_PORT:-7681}:7681"
+    labels:
+      # Caddy Docker Proxy labels (only active if on caddy network)
+      caddy: ${CADDY_HOSTNAME:-clide.lan.wubi.sh}
+      caddy.tls: ${CADDY_TLS:-internal}
+      caddy.reverse_proxy: "{{upstreams 7681}}"
+
+  # Interactive shell — all three CLIs available
+  shell:
+    <<: *base
+
+  # GitHub Copilot CLI
+  copilot:
+    <<: *base
+    command: ["copilot"]
+
+  # GitHub CLI
+  gh:
+    <<: *base
+    command: ["gh"]
+
+  # Claude Code CLI
+  claude:
+    <<: *base
+    command: ["claude"]

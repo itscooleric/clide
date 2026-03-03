@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "$0")"
+
+usage() {
+  cat <<EOF
+clide — CLI Development Environment
+
+Usage: ./clide <command> [args]
+
+Commands:
+  web         Start web terminal at http://localhost:7681
+  web-stop    Stop the web terminal
+  shell       Open interactive shell (all CLIs available)
+  copilot     Run GitHub Copilot CLI
+  gh [args]   Run GitHub CLI (pass args after)
+  claude      Run Claude Code CLI
+  build       Build the Docker image
+  rebuild     Rebuild the Docker image (no cache)
+  logs        Follow web terminal logs
+  status      Show running containers
+  help        Show this help
+
+Examples:
+  ./clide web                    # start web terminal
+  ./clide shell                  # interactive shell
+  ./clide copilot                # run copilot
+  ./clide gh repo view           # run gh with args
+  PROJECT_DIR=~/myrepo ./clide shell  # mount a specific project
+EOF
+}
+
+splash() {
+  echo ""
+  echo "  ██████╗██╗     ██╗██████╗ ███████╗"
+  echo " ██╔════╝██║     ██║██╔══██╗██╔════╝"
+  echo " ██║     ██║     ██║██║  ██║█████╗  "
+  echo " ██║     ██║     ██║██║  ██║██╔══╝  "
+  echo " ╚██████╗███████╗██║██████╔╝███████╗"
+  echo "  ╚═════╝╚══════╝╚═╝╚═════╝ ╚══════╝"
+  echo ""
+  echo "  CLI Development Environment"
+  echo "  Copilot · GitHub CLI · Claude Code"
+  echo ""
+}
+
+case "${1:-help}" in
+  web)
+    splash
+    docker compose up -d web
+    echo ""
+    echo "  Web terminal running at http://localhost:7681"
+    echo "  Stop with: ./clide web-stop"
+    echo ""
+    ;;
+  web-stop)
+    docker compose down
+    ;;
+  shell)
+    splash
+    docker compose run --rm shell
+    ;;
+  copilot)
+    splash
+    docker compose run --rm copilot
+    ;;
+  gh)
+    shift
+    docker compose run --rm gh "$@"
+    ;;
+  claude)
+    splash
+    docker compose run --rm claude
+    ;;
+  build)
+    docker compose build
+    ;;
+  rebuild)
+    docker compose build --no-cache
+    ;;
+  logs)
+    docker compose logs -f web
+    ;;
+  status)
+    docker compose ps
+    ;;
+  help|--help|-h|*)
+    usage
+    ;;
+esac

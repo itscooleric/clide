@@ -1,0 +1,23 @@
+# Docker Compose override for Caddy Docker Proxy mode
+# This file is gitignored - safe for local customization
+#
+# Usage:
+#   1. Copy this file to docker-compose.override.yml
+#   2. Docker Compose will automatically merge it with docker-compose.yml
+#   3. Customize as needed for your deployment
+#
+# Generate a bcrypt hash for your password:
+#   docker run --rm caddy:latest caddy hash-password --plaintext 'yourpassword'
+
+services:
+  web:
+    networks:
+      - caddy
+    ports: []  # Remove port exposure when using Caddy proxy
+    # Uncomment labels below to enable Caddy basicauth
+    # labels:
+    #   caddy: ${CADDY_HOSTNAME:-clide.lan.wubi.sh}
+    #   caddy.tls: ${CADDY_TLS:-internal}
+    #   caddy.reverse_proxy: "{{upstreams 7681}}"
+    #   caddy.basicauth: /*
+    #   caddy.basicauth.${CADDY_BASICAUTH_USER:-admin}: ${CADDY_BASICAUTH_HASH}
