@@ -67,7 +67,6 @@ cp docker-compose.override.yml.example docker-compose.override.yml
 This override file (gitignored) will:
 - Add the `web` service to the `caddy` network
 - Remove port exposure (Caddy proxies directly to container)
-```
 
 ### Step 4: Ensure external network exists
 ```bash
