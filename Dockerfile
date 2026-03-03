@@ -2,38 +2,39 @@ FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install base dependencies
-RUN apt-get update && apt-get install -y \
+# Install base dependencies (curl only — no wget)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
     git \
-    wget \
     gnupg \
     && rm -rf /var/lib/apt/lists/*
 
 # Install GitHub CLI (official apt repo)
-RUN mkdir -p -m 755 /etc/apt/keyrings \
-    && wget -nv -O /etc/apt/keyrings/githubcli-archive-keyring.gpg \
-       https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+RUN mkdir -p /etc/apt/keyrings \
+    && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+       -o /etc/apt/keyrings/githubcli-archive-keyring.gpg \
     && chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
        > /etc/apt/sources.list.d/github-cli.list \
-    && apt-get update && apt-get install -y gh \
+    && apt-get update && apt-get install -y --no-install-recommends gh \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js LTS (required for Claude Code CLI)
-RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \
-    && apt-get install -y nodejs \
+# Install Node.js 22.x LTS (pinned major; avoids surprise LTS jumps)
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Install ttyd for web terminal access
-RUN curl -fsSL https://github.com/tsl0922/ttyd/releases/latest/download/ttyd.$(uname -m) -o /usr/local/bin/ttyd \
+# Install ttyd 1.7.7 for web terminal access (pinned — avoid /latest/ surprises)
+RUN curl -fsSL https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.$(uname -m) \
+    -o /usr/local/bin/ttyd \
     && chmod +x /usr/local/bin/ttyd
 
-# Install Claude Code CLI
+# Install Claude Code CLI (unpinned — tracks new features intentionally)
 RUN npm install -g @anthropic-ai/claude-code
 
-# Install GitHub Copilot CLI
+# Install GitHub Copilot CLI (unpinned — tracks gh extension updates)
 RUN curl -fsSL https://gh.io/copilot-install | bash
 
 # Add entrypoint script for web terminal
