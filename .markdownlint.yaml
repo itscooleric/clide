@@ -1,0 +1,6 @@
+default: true
+MD013: false  # line-length: URLs and code examples make 80 chars impractical
+MD022: false  # headings-surrounding-blank-lines: style preference
+MD031: false  # blanks-around-fences: style preference
+MD032: false  # blanks-around-lists: style preference
+MD033: false  # no-inline-html: used intentionally in some docs
