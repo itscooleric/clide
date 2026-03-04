@@ -71,7 +71,7 @@ case "${1:-help}" in
     ;;
   claude)
     splash
-    docker compose run --rm claude
+    CLAUDE_CODE_SIMPLE=1 docker compose run --rm claude
     ;;
   build)
     docker compose build

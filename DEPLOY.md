@@ -50,6 +50,10 @@ nano .env
 Update:
 ```env
 GH_TOKEN=your_github_pat_here
+ANTHROPIC_API_KEY=your_anthropic_key_here
+
+# Keep Claude startup deterministic in containers
+CLAUDE_CODE_SIMPLE=1
 
 # Optional: Set default project directory
 PROJECT_DIR=/srv/clide/projects/default
@@ -116,6 +120,11 @@ docker compose run --rm gh repo view
 docker compose run --rm claude
 ```
 
+To run Claude in full TUI mode (bypass default simple mode):
+```bash
+CLAUDE_CODE_SIMPLE=0 docker compose run --rm claude
+```
+
 ### Custom project directory
 ```bash
 PROJECT_DIR=/path/to/specific/repo docker compose up -d web
@@ -178,6 +187,14 @@ docker exec -it clide-web-1 ss -tulpn | grep 7681
 - Verify DNS: `clide.lan.wubi.sh` resolves to Bernard IP
 - Check Caddy logs: `docker logs caddy-proxy`
 - Verify labels: `docker inspect clide-web-1 --format '{{json .Config.Labels}}'`
+
+### Claude keeps showing first-run setup prompts
+Rebuild and reset service state:
+```bash
+docker compose down -v
+docker compose build --no-cache
+docker compose run --rm claude
+```
 
 ### Permission errors on project directory
 ```bash
