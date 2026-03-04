@@ -2,6 +2,8 @@ x-base: &base
   build: .
   image: clide
   env_file: .env
+  environment:
+    CLAUDE_CODE_SIMPLE: ${CLAUDE_CODE_SIMPLE:-1}
   volumes:
     - ${PROJECT_DIR:-..}:/workspace
   stdin_open: true
@@ -43,4 +45,5 @@ services:
   # Claude Code CLI
   claude:
     <<: *base
-    command: ["claude"]
+    entrypoint: ["/usr/local/bin/claude-entrypoint.sh"]
+    command: []

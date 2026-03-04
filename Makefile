@@ -29,7 +29,7 @@ gh: ## Run GitHub CLI
 	docker compose run --rm gh $(ARGS)
 
 claude: ## Run Claude Code CLI
-	docker compose run --rm claude
+	CLAUDE_CODE_SIMPLE=1 docker compose run --rm claude
 
 logs: ## Show web terminal logs
 	docker compose logs -f web

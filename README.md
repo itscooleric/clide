@@ -18,6 +18,15 @@ Dockerized CLI toolkit with [GitHub Copilot CLI](https://github.com/github/copil
 | GitHub CLI | `gh` | `GH_TOKEN` |
 | Claude Code | `claude` | `ANTHROPIC_API_KEY` |
 
+### Claude startup behavior
+
+- `make claude` and `./clide claude` force `CLAUDE_CODE_SIMPLE=1` for predictable container startup.
+- The Claude service uses a container entrypoint (`/usr/local/bin/claude-entrypoint.sh`) that pre-seeds Claude config to avoid repeated first-run setup prompts.
+- If you prefer full TUI mode, run compose directly with an override:
+   ```bash
+   CLAUDE_CODE_SIMPLE=0 docker compose run --rm claude
+   ```
+
 ## Setup
 
 1. Add your GitHub token to `.env` (add `ANTHROPIC_API_KEY` only if using Claude Code):
@@ -54,6 +63,7 @@ Dockerized CLI toolkit with [GitHub Copilot CLI](https://github.com/github/copil
 make web          # start web terminal
 make shell        # interactive shell
 make copilot      # run copilot
+make claude       # run Claude Code CLI
 make help         # show all targets
 ```
 
@@ -88,3 +98,10 @@ See [`DEPLOY.md`](./DEPLOY.md) for Caddy Docker Proxy integration. Uses `docker-
   ```bash
   docker compose build --no-cache
   ```
+
+- If Claude gets stuck in setup prompts again after local changes, reset and rebuild:
+   ```bash
+   docker compose down -v
+   docker compose build --no-cache
+   make claude
+   ```
