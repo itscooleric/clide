@@ -1,8 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-CLAUDE_CONFIG="/root/.claude.json"
-
 mkdir -p /root
 
 node <<'NODE'
@@ -45,4 +43,4 @@ if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
   unset ANTHROPIC_API_KEY
 fi
 
-exec claude "$@"
+exec "${@:-claude}"

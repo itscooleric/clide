@@ -28,9 +28,11 @@ services:
       caddy.tls: ${CADDY_TLS:-internal}
       caddy.reverse_proxy: "{{upstreams 7681}}"
 
-  # Interactive shell — all three CLIs available
+  # Interactive shell — all three CLIs available (claude config pre-seeded)
   shell:
     <<: *base
+    entrypoint: ["/usr/local/bin/claude-entrypoint.sh"]
+    command: ["/bin/bash"]
 
   # GitHub Copilot CLI
   copilot:
