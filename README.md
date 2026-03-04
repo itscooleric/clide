@@ -21,7 +21,7 @@ Dockerized CLI toolkit with [GitHub Copilot CLI](https://github.com/github/copil
 ### Claude startup behavior
 
 - `make claude` and `./clide claude` force `CLAUDE_CODE_SIMPLE=1` for predictable container startup.
-- The Claude service uses a container entrypoint (`/usr/local/bin/claude-entrypoint.sh`) that pre-seeds Claude config to avoid repeated first-run setup prompts.
+- The `claude` and `shell` services share a container entrypoint (`/usr/local/bin/claude-entrypoint.sh`) that pre-seeds Claude config to avoid repeated first-run setup prompts — so running `claude` from inside `make shell` works too.
 - If you prefer full TUI mode, run compose directly with an override:
    ```bash
    CLAUDE_CODE_SIMPLE=0 docker compose run --rm claude
