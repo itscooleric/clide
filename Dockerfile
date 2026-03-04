@@ -43,9 +43,10 @@ RUN npm install -g @anthropic-ai/claude-code
 # Install GitHub Copilot CLI (unpinned — tracks gh extension updates)
 RUN curl -fsSL https://gh.io/copilot-install | bash
 
-# Add entrypoint script for web terminal
+# Add entrypoint scripts
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+COPY claude-entrypoint.sh /usr/local/bin/claude-entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/claude-entrypoint.sh
 
 # Auth env vars:
 #   GH_TOKEN      — GitHub fine-grained PAT with "Copilot Requests" permission
