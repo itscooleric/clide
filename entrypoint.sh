@@ -4,11 +4,14 @@ set -e
 # Pre-seed Claude config (auth, onboarding flags) — same as claude-entrypoint.sh
 # This ensures CLAUDE_CODE_OAUTH_TOKEN / ANTHROPIC_API_KEY from .env are wired up
 # before any shell session in the web terminal runs `claude`.
-/usr/local/bin/claude-entrypoint.sh true
+# Pass CLIDE_TMUX= (blank) so the tmux opt-in branch in claude-entrypoint.sh is
+# skipped — the web terminal always manages its own tmux session via ttyd below.
+CLIDE_TMUX= /usr/local/bin/claude-entrypoint.sh true
 
 # Mirror the env cleanup from claude-entrypoint.sh — the subprocess call above
 # runs unset in its own shell so it doesn't propagate here. We replicate it so
 # ttyd and all bash sessions it spawns see the same env as `make shell`.
+# Keep in sync with the cleanup block in claude-entrypoint.sh.
 if [[ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" && -n "${ANTHROPIC_API_KEY:-}" ]]; then
   echo "ttyd: clearing ANTHROPIC_API_KEY from env (OAuth token takes priority)"
   unset ANTHROPIC_API_KEY
