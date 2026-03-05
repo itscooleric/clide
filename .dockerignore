@@ -2,6 +2,10 @@
 .env
 .env.*
 
+# Keep example env files visible/included for editing and image context docs
+!.env.example
+!*.env.example
+
 # Version control
 .git
 .gitignore
