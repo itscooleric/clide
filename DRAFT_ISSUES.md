@@ -4,7 +4,7 @@ Three features not yet tracked in the issue tracker. Ready to file as individual
 
 ---
 
-## Issue 1: tmux integration for multi-pane workflows inside the container
+## Issue 1: tmux integration + terminal developer tooling bundle
 
 **Labels:** `enhancement`
 
@@ -12,20 +12,42 @@ Three features not yet tracked in the issue tracker. Ready to file as individual
 
 Currently, users get a single terminal pane when running `./clide shell` or the web terminal (`./clide web`). Heavy workflows — e.g., running Claude Code in one pane while watching logs or editing files in another — require opening multiple terminal tabs or separate `docker exec` sessions, which is awkward.
 
-Adding tmux to the container and configuring it as the default shell entrypoint for the `shell` and `web` services would give users native multi-pane support without any host-side tooling.
+This issue covers tmux for multi-pane support, editors (vim/neovim/nano), and a small set of terminal tools that are near-universally useful in a coding environment and compose well together.
 
 **Proposed approach:**
+
+_tmux:_
 - Install `tmux` in the Dockerfile.
-- Optionally include a default `.tmux.conf` (sensible key bindings, mouse support).
-- For the `web` service (ttyd), launch ttyd with `tmux new-session -A -s main` as the command instead of bare `bash`, so every browser tab attaches to or creates a shared session.
-- For `make shell` / `./clide shell`, consider wrapping with `tmux new-session -A -s main` behind an opt-in env var (e.g., `CLIDE_TMUX=1`) so existing users aren't surprised.
+- Ship a minimal `.tmux.conf`: mouse support, sensible prefix, 256-color.
+- For the `web` service (ttyd), launch with `tmux new-session -A -s main` so browser tab refresh re-attaches rather than spawning a new shell.
+- For `./clide shell`, wrap with tmux behind an opt-in env var (`CLIDE_TMUX=1`) so existing users aren't surprised.
+
+_Editors:_
+- Install `neovim`, `vim`, and `nano` via apt.
+- Ship a minimal `/etc/vim/vimrc.local` (line numbers, syntax on, mouse support, 2-space indent) so vim/neovim aren't hostile out of the box.
+- No default neovim plugin manager — keep it simple; power users can bring their own config via a volume mount.
+- `CLIDE_EDITOR` env var sets `$EDITOR` / `$VISUAL` inside the container (default: `nvim`).
+
+_Terminal tools:_
+| Tool | Rationale |
+|---|---|
+| `fzf` | Fuzzy finder for files and shell history; integrates with vim, ripgrep, and tmux |
+| `ripgrep` | Fast code search; neovim uses it as its native grep engine |
+| `lazygit` | TUI git client; natural fit for a dedicated tmux pane alongside Claude Code |
+| `jq` | JSON processing; useful when inspecting API responses from any bundled CLI |
+
+Intentionally excluded from this issue: alternative shells (zsh, fish), LSP servers, plugin managers — those are personal preference and add significant complexity.
 
 **Acceptance criteria:**
-- [ ] `tmux` is available inside the container (`tmux -V` works).
+- [ ] `tmux` is available and `tmux -V` works.
 - [ ] Web terminal (`./clide web`) launches inside a tmux session by default; refreshing the browser re-attaches rather than spawning a new shell.
-- [ ] Interactive shell (`./clide shell`) can optionally launch in tmux via an env var or flag.
-- [ ] Existing behaviour (single-pane) is preserved as the default for `make shell` / `./clide shell` so current users are not broken.
-- [ ] README documents the tmux workflow (split panes, detach/attach).
+- [ ] `./clide shell` can optionally launch in tmux via `CLIDE_TMUX=1`; single-pane remains the default.
+- [ ] `nvim`, `vim`, and `nano` are all available in the container.
+- [ ] A minimal shared vimrc is present so vim/neovim work sensibly with no user config.
+- [ ] `CLIDE_EDITOR` env var controls `$EDITOR`/`$VISUAL`; defaults to `nvim`.
+- [ ] `fzf`, `ripgrep` (`rg`), `lazygit`, and `jq` are all available in the container.
+- [ ] Total image size increase from all tools in this issue is documented in the PR.
+- [ ] README documents the tmux workflow (split panes, detach/attach) and lists the bundled tools.
 
 ---
 
