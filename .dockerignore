@@ -1,0 +1,27 @@
+# Secrets and local config - must never enter build context
+.env
+.env.*
+
+# Version control
+.git
+.gitignore
+
+# Editor / IDE
+.vscode
+
+# CI / GitHub metadata
+.github
+
+# Documentation
+README.md
+DEPLOY.md
+
+# Docker Compose files (not needed inside image)
+docker-compose*.yml
+
+# node_modules (not present here, but excluded as a safeguard)
+node_modules
+
+# Markdown lint config (dev tooling only)
+.markdownlint.yaml
+.hadolint.yaml
