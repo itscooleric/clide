@@ -23,7 +23,7 @@ Dockerized CLI toolkit with [GitHub Copilot CLI](https://github.com/github/copil
 
 Two auth methods are supported. **Do not set both** — if both are present, the OAuth token takes priority and the API key is ignored.
 
-**Option 1: OAuth token (recommended for subscription users)**
+#### Option 1: OAuth token (recommended for subscription users)
 
 Uses your Claude Pro/Max subscription limits — no API credits consumed. Generate a token on any machine with a browser:
 ```bash
@@ -34,7 +34,7 @@ This produces a long-lived token (valid for 1 year). Add it to `.env`:
 CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-xxxxx
 ```
 
-**Option 2: Anthropic API key**
+#### Option 2: Anthropic API key
 
 Uses pay-per-use API credits. Create a key at https://console.anthropic.com/settings/keys and add to `.env`:
 ```env
@@ -49,6 +49,27 @@ ANTHROPIC_API_KEY=sk-ant-xxxxx
    ```bash
    CLAUDE_CODE_SIMPLE=0 docker compose run --rm claude
    ```
+
+### tmux — multi-pane workflows
+
+`tmux` is installed in the container and enabled by default in the **web terminal**. Every browser tab attaches to the same named session (`main`), so refreshing the page re-attaches rather than spawning a fresh shell.
+
+For `make shell` / `./clide shell`, tmux is **opt-in** to avoid breaking existing workflows:
+```env
+# .env
+CLIDE_TMUX=1
+```
+
+**Useful shortcuts (web terminal):**
+
+| Key | Action |
+|-----|--------|
+| `Ctrl-b \|` | Split pane horizontally |
+| `Ctrl-b -` | Split pane vertically |
+| `Ctrl-b <arrow>` | Move between panes |
+| `Ctrl-b d` | Detach (session stays alive) |
+| `Ctrl-b r` | Reload tmux config |
+| Mouse | Click to focus, scroll to scroll, drag to resize |
 
 ## Setup
 
