@@ -1,7 +1,10 @@
 #!/bin/bash
 set -euo pipefail
 
-mkdir -p "$HOME"
+HOME_DIR="${HOME:-/home/clide}"
+mkdir -p "$HOME_DIR"
+
+export HOME="$HOME_DIR"
 
 node <<'NODE'
 const fs = require('fs');
