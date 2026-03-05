@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     git \
     gnupg \
+    iptables \
     tmux \
     && rm -rf /var/lib/apt/lists/*
 
@@ -47,7 +48,8 @@ RUN curl -fsSL https://gh.io/copilot-install | bash
 # Add entrypoint scripts
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY claude-entrypoint.sh /usr/local/bin/claude-entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/claude-entrypoint.sh
+COPY firewall.sh /usr/local/bin/firewall.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/claude-entrypoint.sh /usr/local/bin/firewall.sh
 
 # tmux config — mouse support, sane splits, 256-colour
 COPY .tmux.conf /root/.tmux.conf
