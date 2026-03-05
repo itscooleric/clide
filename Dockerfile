@@ -41,8 +41,10 @@ RUN ARCH="$(uname -m)" \
 # hadolint ignore=DL3016
 RUN npm install -g @anthropic-ai/claude-code
 
-# Install GitHub Copilot CLI (unpinned — tracks gh extension updates)
-RUN curl -fsSL https://gh.io/copilot-install | bash
+# Create unprivileged user and set up workspace
+RUN useradd -m -s /bin/bash -u 1000 clide \
+    && mkdir -p /workspace \
+    && chown clide:clide /workspace
 
 # Add entrypoint scripts
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
@@ -50,7 +52,13 @@ COPY claude-entrypoint.sh /usr/local/bin/claude-entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/claude-entrypoint.sh
 
 # tmux config — mouse support, sane splits, 256-colour
-COPY .tmux.conf /root/.tmux.conf
+COPY --chown=clide:clide .tmux.conf /home/clide/.tmux.conf
+
+# Switch to unprivileged user for user-scoped installs
+USER clide
+
+# Install GitHub Copilot CLI (unpinned — tracks gh extension updates)
+RUN curl -fsSL https://gh.io/copilot-install | bash
 
 # Auth env vars:
 #   GH_TOKEN      — GitHub fine-grained PAT with "Copilot Requests" permission
