@@ -23,7 +23,7 @@ Dockerized CLI toolkit with [GitHub Copilot CLI](https://github.com/github/copil
 
 Two auth methods are supported. **Do not set both** — if both are present, the OAuth token takes priority and the API key is ignored.
 
-**Option 1: OAuth token (recommended for subscription users)**
+#### Option 1: OAuth token (recommended for subscription users)
 
 Uses your Claude Pro/Max subscription limits — no API credits consumed. Generate a token on any machine with a browser:
 ```bash
@@ -34,7 +34,7 @@ This produces a long-lived token (valid for 1 year). Add it to `.env`:
 CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-xxxxx
 ```
 
-**Option 2: Anthropic API key**
+#### Option 2: Anthropic API key
 
 Uses pay-per-use API credits. Create a key at https://console.anthropic.com/settings/keys and add to `.env`:
 ```env

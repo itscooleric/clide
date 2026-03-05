@@ -6,7 +6,7 @@ set -e
 # before any shell session in the web terminal runs `claude`.
 # Pass CLIDE_TMUX= (blank) so the tmux opt-in branch in claude-entrypoint.sh is
 # skipped — the web terminal always manages its own tmux session via ttyd below.
-CLIDE_TMUX= /usr/local/bin/claude-entrypoint.sh true
+CLIDE_TMUX='' /usr/local/bin/claude-entrypoint.sh true
 
 # Mirror the env cleanup from claude-entrypoint.sh — the subprocess call above
 # runs unset in its own shell so it doesn't propagate here. We replicate it so
