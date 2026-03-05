@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+export CLIDE_EDITOR="${CLIDE_EDITOR:-nvim}"
+export EDITOR="$CLIDE_EDITOR"
+export VISUAL="$CLIDE_EDITOR"
+
 # Pre-seed Claude config (auth, onboarding flags) — same as claude-entrypoint.sh
 # This ensures CLAUDE_CODE_OAUTH_TOKEN / ANTHROPIC_API_KEY from .env are wired up
 # before any shell session in the web terminal runs `claude`.

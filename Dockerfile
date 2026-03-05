@@ -10,6 +10,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     gnupg \
     tmux \
+    neovim \
+    vim \
+    nano \
+    fzf \
+    ripgrep \
+    jq \
     && rm -rf /var/lib/apt/lists/*
 
 # Install GitHub CLI (official apt repo)
@@ -30,6 +36,21 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
+
+
+# Install lazygit (pinned release)
+RUN LAZYGIT_VERSION="0.50.0" \
+    && ARCH="$(dpkg --print-architecture)" \
+    && case "$ARCH" in \
+         amd64) LG_ARCH="x86_64" ;; \
+         arm64) LG_ARCH="arm64" ;; \
+         *) echo "Unsupported architecture for lazygit: $ARCH" && exit 1 ;; \
+       esac \
+    && curl -fsSL "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_${LG_ARCH}.tar.gz" \
+      -o /tmp/lazygit.tar.gz \
+    && tar -xzf /tmp/lazygit.tar.gz -C /tmp lazygit \
+    && install /tmp/lazygit /usr/local/bin/lazygit \
+    && rm -f /tmp/lazygit.tar.gz /tmp/lazygit
 
 # Install ttyd 1.7.7 for web terminal access (pinned — avoid /latest/ surprises)
 RUN ARCH="$(uname -m)" \
@@ -53,6 +74,15 @@ RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/claude-entrypoint.sh
 
 # tmux config — mouse support, sane splits, 256-colour
 COPY --chown=clide:clide .tmux.conf /home/clide/.tmux.conf
+
+# Shared editor defaults for vim and neovim
+COPY vimrc.local /etc/vim/vimrc.local
+RUN mkdir -p /etc/xdg/nvim \
+    && printf "source /etc/vim/vimrc.local\n" > /etc/xdg/nvim/sysinit.vim
+
+ENV CLIDE_EDITOR=nvim \
+    EDITOR=nvim \
+    VISUAL=nvim
 
 # Switch to unprivileged user for user-scoped installs
 USER clide

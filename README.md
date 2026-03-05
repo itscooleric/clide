@@ -50,6 +50,24 @@ ANTHROPIC_API_KEY=sk-ant-xxxxx
    CLAUDE_CODE_SIMPLE=0 docker compose run --rm claude
    ```
 
+### Bundled terminal tooling
+
+In addition to the CLIs above, the container includes an editor/tooling bundle aimed at tmux-based workflows:
+
+| Tool | Command |
+|---|---|
+| Neovim | `nvim` |
+| Vim | `vim` |
+| Nano | `nano` |
+| fzf | `fzf` |
+| ripgrep | `rg` |
+| lazygit | `lazygit` |
+| jq | `jq` |
+
+A minimal shared vim config is shipped at `/etc/vim/vimrc.local` and loaded by both vim and neovim (`/etc/xdg/nvim/sysinit.vim` sources it). Defaults include line numbers, syntax highlighting, mouse support, and 2-space indentation.
+
+Set `CLIDE_EDITOR` to control `$EDITOR` and `$VISUAL` inside the container (default: `nvim`).
+
 ### tmux — multi-pane workflows
 
 `tmux` is installed in the container and enabled by default in the **web terminal**. Every browser tab attaches to the same named session (`main`), so refreshing the page re-attaches rather than spawning a fresh shell.

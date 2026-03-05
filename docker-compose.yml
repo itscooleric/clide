@@ -6,6 +6,9 @@ x-base: &base
     CLAUDE_CODE_SIMPLE: ${CLAUDE_CODE_SIMPLE:-1}
     CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
     CLIDE_TMUX: ${CLIDE_TMUX:-}
+    CLIDE_EDITOR: ${CLIDE_EDITOR:-nvim}
+    EDITOR: ${CLIDE_EDITOR:-nvim}
+    VISUAL: ${CLIDE_EDITOR:-nvim}
   volumes:
     - ${PROJECT_DIR:-..}:/workspace
   stdin_open: true

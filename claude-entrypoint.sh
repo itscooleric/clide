@@ -3,6 +3,10 @@ set -euo pipefail
 
 mkdir -p "$HOME"
 
+export CLIDE_EDITOR="${CLIDE_EDITOR:-nvim}"
+export EDITOR="$CLIDE_EDITOR"
+export VISUAL="$CLIDE_EDITOR"
+
 node <<'NODE'
 const fs = require('fs');
 
