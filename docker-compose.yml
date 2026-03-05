@@ -5,6 +5,7 @@ x-base: &base
   environment:
     CLAUDE_CODE_SIMPLE: ${CLAUDE_CODE_SIMPLE:-1}
     CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
+    CLIDE_TMUX: ${CLIDE_TMUX:-}
   volumes:
     - ${PROJECT_DIR:-..}:/workspace
   stdin_open: true

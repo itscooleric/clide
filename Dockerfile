@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     git \
     gnupg \
+    tmux \
     && rm -rf /var/lib/apt/lists/*
 
 # Install GitHub CLI (official apt repo)
@@ -47,6 +48,9 @@ RUN curl -fsSL https://gh.io/copilot-install | bash
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY claude-entrypoint.sh /usr/local/bin/claude-entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/claude-entrypoint.sh
+
+# tmux config — mouse support, sane splits, 256-colour
+COPY .tmux.conf /root/.tmux.conf
 
 # Auth env vars:
 #   GH_TOKEN      — GitHub fine-grained PAT with "Copilot Requests" permission

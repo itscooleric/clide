@@ -50,6 +50,27 @@ ANTHROPIC_API_KEY=sk-ant-xxxxx
    CLAUDE_CODE_SIMPLE=0 docker compose run --rm claude
    ```
 
+### tmux — multi-pane workflows
+
+`tmux` is installed in the container and enabled by default in the **web terminal**. Every browser tab attaches to the same named session (`main`), so refreshing the page re-attaches rather than spawning a fresh shell.
+
+For `make shell` / `./clide shell`, tmux is **opt-in** to avoid breaking existing workflows:
+```env
+# .env
+CLIDE_TMUX=1
+```
+
+**Useful shortcuts (web terminal):**
+
+| Key | Action |
+|-----|--------|
+| `Ctrl-b \|` | Split pane horizontally |
+| `Ctrl-b -` | Split pane vertically |
+| `Ctrl-b <arrow>` | Move between panes |
+| `Ctrl-b d` | Detach (session stays alive) |
+| `Ctrl-b r` | Reload tmux config |
+| Mouse | Click to focus, scroll to scroll, drag to resize |
+
 ## Setup
 
 1. Add your GitHub token and Claude auth to `.env`:

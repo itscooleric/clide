@@ -60,4 +60,10 @@ elif [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
   unset ANTHROPIC_API_KEY
 fi
 
+# Opt-in tmux wrapping for shell service (set CLIDE_TMUX=1 in .env)
+# Web terminal always uses tmux via entrypoint.sh; this covers make shell / ./clide shell.
+if [[ -n "${CLIDE_TMUX:-}" ]]; then
+  exec tmux new-session -A -s main "${@:-claude}"
+fi
+
 exec "${@:-claude}"
