@@ -38,7 +38,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && rm -rf /var/lib/apt/lists/*
 
 
-# Install lazygit (pinned release)
+# Install lazygit (pinned release, checksum-verified)
 RUN LAZYGIT_VERSION="0.50.0" \
     && ARCH="$(dpkg --print-architecture)" \
     && case "$ARCH" in \
@@ -46,11 +46,16 @@ RUN LAZYGIT_VERSION="0.50.0" \
          arm64) LG_ARCH="arm64" ;; \
          *) echo "Unsupported architecture for lazygit: $ARCH" && exit 1 ;; \
        esac \
-    && curl -fsSL "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_${LG_ARCH}.tar.gz" \
+    && LAZYGIT_FILE="lazygit_${LAZYGIT_VERSION}_Linux_${LG_ARCH}.tar.gz" \
+    && curl -fsSL "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/${LAZYGIT_FILE}" \
       -o /tmp/lazygit.tar.gz \
+    && curl -fsSL "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/checksums.txt" \
+      -o /tmp/lazygit_checksums.txt \
+    && grep "${LAZYGIT_FILE}" /tmp/lazygit_checksums.txt | sha256sum -c - \
+         || (echo "Checksum verification failed for ${LAZYGIT_FILE}" && exit 1) \
     && tar -xzf /tmp/lazygit.tar.gz -C /tmp lazygit \
     && install /tmp/lazygit /usr/local/bin/lazygit \
-    && rm -f /tmp/lazygit.tar.gz /tmp/lazygit
+    && rm -f /tmp/lazygit.tar.gz /tmp/lazygit /tmp/lazygit_checksums.txt
 
 # Install ttyd 1.7.7 for web terminal access (pinned — avoid /latest/ surprises)
 RUN ARCH="$(uname -m)" \
