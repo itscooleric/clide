@@ -4,6 +4,7 @@ x-base: &base
   env_file: .env
   environment:
     CLAUDE_CODE_SIMPLE: ${CLAUDE_CODE_SIMPLE:-1}
+    CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
   volumes:
     - ${PROJECT_DIR:-..}:/workspace
   stdin_open: true

@@ -8,6 +8,7 @@ const fs = require('fs');
 
 const configPath = '/root/.claude.json';
 const apiKey = process.env.ANTHROPIC_API_KEY || '';
+const oauthToken = process.env.CLAUDE_CODE_OAUTH_TOKEN || '';
 
 let current = {};
 if (fs.existsSync(configPath)) {
@@ -32,14 +33,30 @@ const next = {
   },
 };
 
-if (apiKey) {
+// Only inject API key if OAuth token is NOT set (OAuth takes priority)
+if (!oauthToken && apiKey) {
   next.primaryApiKey = apiKey;
 }
 
 fs.writeFileSync(configPath, JSON.stringify(next, null, 2));
+
+// Report which auth method is active
+if (oauthToken) {
+  console.log('claude: using OAuth token (subscription limits)');
+} else if (apiKey) {
+  console.log('claude: using API key (API credits)');
+} else {
+  console.log('claude: WARNING - no authentication configured');
+  console.log('  Set CLAUDE_CODE_OAUTH_TOKEN (subscription) or ANTHROPIC_API_KEY (API credits) in .env');
+  console.log('  To generate an OAuth token: claude setup-token (on a machine with a browser)');
+}
 NODE
 
-if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
+# Clear API key from env if OAuth token is set (avoid auth conflicts)
+if [[ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" && -n "${ANTHROPIC_API_KEY:-}" ]]; then
+  echo "claude: clearing ANTHROPIC_API_KEY from env (OAuth token takes priority)"
+  unset ANTHROPIC_API_KEY
+elif [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
   unset ANTHROPIC_API_KEY
 fi
 
