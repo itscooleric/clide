@@ -7,8 +7,9 @@ Dockerized CLI toolkit with [GitHub Copilot CLI](https://github.com/github/copil
 - Docker + Docker Compose
 - A GitHub fine-grained PAT with the **"Copilot Requests"** permission
   - Create one at: https://github.com/settings/personal-access-tokens/new
-- An Anthropic API key (optional, only needed for Claude Code)
-  - Create one at: https://console.anthropic.com/settings/keys
+- Claude Code authentication (optional, choose one):
+  - **OAuth token** (recommended) — uses your Claude Pro/Max subscription limits
+  - **Anthropic API key** — uses pay-per-use API credits
 
 ## Included CLIs
 
@@ -16,7 +17,29 @@ Dockerized CLI toolkit with [GitHub Copilot CLI](https://github.com/github/copil
 |---|---|---|
 | GitHub Copilot CLI | `copilot` | `GH_TOKEN` |
 | GitHub CLI | `gh` | `GH_TOKEN` |
-| Claude Code | `claude` | `ANTHROPIC_API_KEY` |
+| Claude Code | `claude` | `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` |
+
+### Claude Code authentication
+
+Two auth methods are supported. **Do not set both** — if both are present, the OAuth token takes priority and the API key is ignored.
+
+**Option 1: OAuth token (recommended for subscription users)**
+
+Uses your Claude Pro/Max subscription limits — no API credits consumed. Generate a token on any machine with a browser:
+```bash
+claude setup-token
+```
+This produces a long-lived token (valid for 1 year). Add it to `.env`:
+```env
+CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-xxxxx
+```
+
+**Option 2: Anthropic API key**
+
+Uses pay-per-use API credits. Create a key at https://console.anthropic.com/settings/keys and add to `.env`:
+```env
+ANTHROPIC_API_KEY=sk-ant-xxxxx
+```
 
 ### Claude startup behavior
 
@@ -29,10 +52,19 @@ Dockerized CLI toolkit with [GitHub Copilot CLI](https://github.com/github/copil
 
 ## Setup
 
-1. Add your GitHub token to `.env` (add `ANTHROPIC_API_KEY` only if using Claude Code):
+1. Add your GitHub token and Claude auth to `.env`:
    ```env
    GH_TOKEN=your_github_pat_here
-   # ANTHROPIC_API_KEY=your_anthropic_key_here  # optional
+
+   # Choose ONE:
+   CLAUDE_CODE_OAUTH_TOKEN=your_oauth_token_here   # subscription
+   # ANTHROPIC_API_KEY=your_api_key_here            # API credits
+
+   # Optional — keeps git authorship consistent inside the container:
+   # GIT_AUTHOR_NAME=Your Name
+   # GIT_AUTHOR_EMAIL=you@users.noreply.github.com
+   # GIT_COMMITTER_NAME=Your Name
+   # GIT_COMMITTER_EMAIL=you@users.noreply.github.com
    ```
 
 2. (Optional) Enable web terminal authentication:
@@ -92,7 +124,7 @@ See [`DEPLOY.md`](./DEPLOY.md) for Caddy Docker Proxy integration. Uses `docker-
 
 ## Notes
 
-- Tokens don't expire unless you set an expiry — set them once in `.env` and you're done.
+- Tokens don't expire unless you set an expiry — set them once in `.env` and you're done. OAuth tokens from `claude setup-token` are valid for 1 year.
 - `.env` is gitignored. Don't commit it.
 - To rebuild with latest CLI versions:
   ```bash
