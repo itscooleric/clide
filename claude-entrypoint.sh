@@ -1,12 +1,15 @@
 #!/bin/bash
 set -euo pipefail
 
-mkdir -p /root
+HOME_DIR="${HOME:-/home/clide}"
+mkdir -p "$HOME_DIR"
+
+export HOME="$HOME_DIR"
 
 node <<'NODE'
 const fs = require('fs');
 
-const configPath = '/root/.claude.json';
+const configPath = `${process.env.HOME}/.claude.json`;
 const apiKey = process.env.ANTHROPIC_API_KEY || '';
 const oauthToken = process.env.CLAUDE_CODE_OAUTH_TOKEN || '';
 
