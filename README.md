@@ -158,3 +158,39 @@ See [`DEPLOY.md`](./DEPLOY.md) for Caddy Docker Proxy integration. Uses `docker-
    docker compose build --no-cache
    make claude
    ```
+
+## Egress firewall
+
+By default every clide container applies an **iptables egress allowlist** at startup, restricting outbound traffic to the known service endpoints.  All bundled CLIs continue to work normally within these defaults.
+
+### Default allowlist
+
+| Host | Used by |
+|---|---|
+| `api.anthropic.com` | Claude Code |
+| `api.githubcopilot.com` | GitHub Copilot CLI |
+| `api.github.com` | GitHub Copilot CLI · GitHub CLI |
+| `github.com` | GitHub CLI |
+| `registry.npmjs.org` | npm package updates |
+
+DNS (port 53) and loopback traffic are always allowed.
+
+### Adding hosts
+
+Set `CLIDE_ALLOWED_HOSTS` in `.env` to a comma- or newline-separated list of extra hostnames:
+```env
+CLIDE_ALLOWED_HOSTS=pypi.org,files.pythonhosted.org
+```
+
+The hostnames are resolved to IPs at container startup — no rebuild required.
+
+### Disabling the firewall
+
+Set `CLIDE_FIREWALL=0` to restore unrestricted egress:
+```env
+CLIDE_FIREWALL=0
+```
+
+### Requirements
+
+The firewall uses `iptables` and requires the `NET_ADMIN` capability, which is already set in `docker-compose.yml`.  If the capability is unavailable (e.g. a restricted runtime), the script emits a warning and continues without blocking any traffic.
