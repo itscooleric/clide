@@ -6,8 +6,19 @@ x-base: &base
     CLAUDE_CODE_SIMPLE: ${CLAUDE_CODE_SIMPLE:-1}
     CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
     CLIDE_TMUX: ${CLIDE_TMUX:-}
+  # Drop all capabilities then re-add only what the firewall needs.
+  # NET_ADMIN is required for iptables egress rules; set CLIDE_FIREWALL=0 to disable.
+  cap_drop:
+    - ALL
   cap_add:
-    - NET_ADMIN   # required for the iptables egress firewall (CLIDE_FIREWALL=0 to disable)
+    - NET_ADMIN
+  # Prevent processes from gaining new privileges via setuid/setgid binaries.
+  security_opt:
+    - no-new-privileges:true
+  # Resource guardrails — prevent runaway AI workloads from starving the host.
+  mem_limit: 4g
+  cpus: '4.0'
+  pids_limit: 512
   volumes:
     - ${PROJECT_DIR:-..}:/workspace
   stdin_open: true

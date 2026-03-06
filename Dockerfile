@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     git \
     gnupg \
+    gosu \
     iptables \
     tmux \
     && rm -rf /var/lib/apt/lists/*
@@ -80,6 +81,10 @@ RUN curl -fsSL https://gh.io/copilot-install | bash
 # Auth env vars:
 #   GH_TOKEN      — GitHub fine-grained PAT with "Copilot Requests" permission
 #   ANTHROPIC_API_KEY — Anthropic API key for Claude Code
+
+# Switch back to root so entrypoints start as root; privilege drop to clide
+# is handled by gosu inside each entrypoint script after firewall setup.
+USER root
 
 WORKDIR /workspace
 
