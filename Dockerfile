@@ -44,7 +44,7 @@ RUN ARCH="$(uname -m)" \
 RUN npm install -g @anthropic-ai/claude-code
 
 # Install Codex CLI (unpinned — tracks new features intentionally)
-# hadolint ignore=DL3016
+# hadolint ignore=DL3016,DL3059
 RUN npm install -g @openai/codex
 
 # Install Python 3 + dev tooling into an isolated venv
