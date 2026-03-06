@@ -84,6 +84,7 @@ RUN curl -fsSL https://gh.io/copilot-install | bash
 
 # Switch back to root so entrypoints start as root; privilege drop to clide
 # is handled by gosu inside each entrypoint script after firewall setup.
+# hadolint ignore=DL3002
 USER root
 
 WORKDIR /workspace
