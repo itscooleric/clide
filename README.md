@@ -194,3 +194,20 @@ CLIDE_FIREWALL=0
 ### Requirements
 
 The firewall uses `iptables` and requires the `NET_ADMIN` capability, which is already set in `docker-compose.yml`.  If the capability is unavailable (e.g. a restricted runtime), the script emits a warning and continues without blocking any traffic.
+
+## Python dev tooling
+
+The container includes a Python 3 virtual environment at `/opt/pyenv` with the following tools pre-installed and on `PATH`:
+
+| Tool | Purpose |
+|------|---------|
+| `pytest` | Test runner — `pytest tests/` |
+| `ruff` | Linter + formatter — `ruff check .` / `ruff format .` |
+
+To install project dependencies inside the container:
+
+```bash
+pip install -r requirements.txt
+```
+
+The venv is at `/opt/pyenv`; `pip`, `pytest`, and `ruff` are all directly callable without activation.
