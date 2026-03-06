@@ -26,9 +26,9 @@ TTYD_ARGS=(
 )
 
 # Wire gh as git credential helper so git push/fetch work without token embedding.
-# Best-effort: skip gracefully if GH_TOKEN is not set or gh is not authenticated.
-if gh auth status >/dev/null 2>&1; then
-  if ! gh auth setup-git; then
+# Run as clide (user-scoped config); best-effort so missing GH_TOKEN doesn't block startup.
+if gosu clide gh auth status >/dev/null 2>&1; then
+  if ! gosu clide gh auth setup-git; then
     echo "ttyd: WARNING - failed to configure gh as git credential helper; continuing without it"
   fi
 else
@@ -50,4 +50,5 @@ else
   exit 1
 fi
 
-exec ttyd "${TTYD_ARGS[@]}" tmux new-session -A -s main
+# Drop privileges to clide before starting ttyd so the web terminal never runs as root
+exec gosu clide ttyd "${TTYD_ARGS[@]}" tmux new-session -A -s main
