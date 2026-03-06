@@ -2,6 +2,46 @@
 
 Dockerized CLI toolkit with [GitHub Copilot CLI](https://github.com/github/copilot-cli), [GitHub CLI](https://cli.github.com/), and [Claude Code](https://www.anthropic.com/claude/code) — agentic terminal assistants in one container. Run against any local project without installing anything on your host. Access via terminal or browser-based web terminal.
 
+## Architecture
+
+```mermaid
+graph TB
+    subgraph Host["Host Machine"]
+        workspace["📁 Project Directory\n(mounted as /workspace)"]
+        env[".env\n(secrets — gitignored)"]
+        browser["🌐 Browser\nlocalhost:7681"]
+    end
+
+    subgraph Container["clide Container (non-root: clide uid=1000)"]
+        direction TB
+        firewall["🔥 firewall.sh\n(iptables egress allowlist)"]
+
+        subgraph Services["Services"]
+            web["web\n(ttyd → tmux)"]
+            shell["shell\n(bash)"]
+            claude["claude\nClaude Code CLI"]
+            copilot["copilot\nGitHub Copilot CLI"]
+            gh["gh\nGitHub CLI"]
+        end
+    end
+
+    subgraph Internet["Internet (allowlisted endpoints only)"]
+        anthropic["api.anthropic.com\nClaude Code"]
+        ghcopilot["api.githubcopilot.com\nGitHub Copilot"]
+        github["api.github.com\ngithub.com\nGitHub CLI"]
+        npm["registry.npmjs.org\nnpm"]
+    end
+
+    browser -->|"HTTP (ttyd)"| web
+    workspace -->|"bind mount"| Container
+    env -->|"env vars"| Container
+    firewall --> Services
+    Services -->|"blocked by default"| firewall
+    firewall -->|"allowlisted"| Internet
+```
+
+> **Trust boundary:** the host trusts the container with a read-write mount of your project directory and your API credentials via `.env`. The container cannot reach the internet beyond the allowlisted endpoints (when `NET_ADMIN` is available). See [`SECURITY.md`](./SECURITY.md) for the full threat model.
+
 ## Prerequisites
 
 - Docker + Docker Compose
@@ -143,6 +183,14 @@ Your project is mounted at `/workspace` inside the container.
 ### Bernard/Forge deployment
 See [`DEPLOY.md`](./DEPLOY.md) for Caddy Docker Proxy integration. Uses `docker-compose.override.yml` (gitignored) for reverse proxy config that persists across git pulls.
 
+## Additional docs
+
+| Doc | Contents |
+|---|---|
+| [`SECURITY.md`](./SECURITY.md) | Threat model, trust boundaries, attack surface, hardening recommendations |
+| [`RUNBOOK.md`](./RUNBOOK.md) | Operational runbook — health checks, logs, rebuilds, credential rotation, troubleshooting |
+| [`DEPLOY.md`](./DEPLOY.md) | Production deployment with Caddy reverse proxy |
+
 ## Notes
 
 - Tokens don't expire unless you set an expiry — set them once in `.env` and you're done. OAuth tokens from `claude setup-token` are valid for 1 year.
@@ -158,6 +206,45 @@ See [`DEPLOY.md`](./DEPLOY.md) for Caddy Docker Proxy integration. Uses `docker-
    docker compose build --no-cache
    make claude
    ```
+
+## Compatibility
+
+### Host OS
+
+| OS | Status | Notes |
+|---|---|---|
+| Linux | ✅ Supported | Native Docker — full functionality including egress firewall |
+| macOS (Apple Silicon) | ✅ Supported | Docker Desktop required; `arm64` image builds natively |
+| macOS (Intel) | ✅ Supported | Docker Desktop required |
+| Windows (WSL2) | ✅ Supported | Docker Desktop with WSL2 backend required |
+| Windows (no WSL2) | ⚠️ Partial | Egress firewall requires `NET_ADMIN`; availability varies by runtime |
+
+### Docker
+
+| Requirement | Minimum |
+|---|---|
+| Docker Engine | 20.10+ |
+| Docker Compose | v2.0+ (`docker compose`, not `docker-compose`) |
+
+### Architecture
+
+| Arch | Status |
+|---|---|
+| `amd64` (x86_64) | ✅ Supported |
+| `arm64` (Apple Silicon, Graviton) | ✅ Supported |
+
+### Web terminal browser support
+
+| Browser | Status |
+|---|---|
+| Chrome / Chromium | ✅ Supported |
+| Firefox | ✅ Supported |
+| Safari | ✅ Supported |
+| Edge | ✅ Supported |
+
+### Egress firewall
+
+The `iptables` egress firewall requires the `NET_ADMIN` capability and a Linux kernel with `iptables` support. It works out of the box on Linux hosts and Docker Desktop (macOS/Windows). If unavailable, the firewall degrades gracefully — a warning is printed and egress is unrestricted.
 
 ## Egress firewall
 
