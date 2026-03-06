@@ -83,5 +83,9 @@ RUN curl -fsSL https://gh.io/copilot-install | bash
 
 WORKDIR /workspace
 
+# Health check — confirms the web terminal is accepting connections
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:${TTYD_PORT:-7681}/ || exit 1
+
 # Default to bash shell (can be overridden by command in docker-compose)
 CMD ["/bin/bash"]

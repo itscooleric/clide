@@ -25,12 +25,18 @@ TTYD_ARGS=(
   "--base-path" "${TTYD_BASE_PATH:-/}"
 )
 
-# Add basic auth if credentials are set
-if [[ -n "${TTYD_USER}" && -n "${TTYD_PASS}" ]]; then
+# Wire gh as git credential helper so git push/fetch work without token embedding
+gh auth setup-git
+
+# Auth is required by default; set TTYD_NO_AUTH=true to explicitly allow unauthenticated access
+if [[ "${TTYD_NO_AUTH:-}" == "true" ]]; then
+  echo "ttyd: WARNING - unauthenticated access enabled (TTYD_NO_AUTH=true)"
+elif [[ -n "${TTYD_USER}" && -n "${TTYD_PASS}" ]]; then
   TTYD_ARGS+=("--credential" "${TTYD_USER}:${TTYD_PASS}")
   echo "ttyd: basic auth enabled for user '${TTYD_USER}'"
 else
-  echo "ttyd: WARNING - no authentication configured (set TTYD_USER and TTYD_PASS in .env)"
+  echo "ttyd: ERROR - no credentials configured. Set TTYD_USER and TTYD_PASS in .env, or set TTYD_NO_AUTH=true to explicitly disable auth."
+  exit 1
 fi
 
 exec ttyd "${TTYD_ARGS[@]}" tmux new-session -A -s main
