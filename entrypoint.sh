@@ -25,15 +25,26 @@ TTYD_ARGS=(
   "--base-path" "${TTYD_BASE_PATH:-/}"
 )
 
-# Wire gh as git credential helper so git push/fetch work without token embedding
-gh auth setup-git
+# Wire gh as git credential helper so git push/fetch work without token embedding.
+# Best-effort: skip gracefully if GH_TOKEN is not set or gh is not authenticated.
+if gh auth status >/dev/null 2>&1; then
+  if ! gh auth setup-git; then
+    echo "ttyd: WARNING - failed to configure gh as git credential helper; continuing without it"
+  fi
+else
+  echo "ttyd: WARNING - GitHub CLI not authenticated (GH_TOKEN not set?); skipping gh auth setup-git"
+fi
 
-# Auth is required by default; set TTYD_NO_AUTH=true to explicitly allow unauthenticated access
-if [[ "${TTYD_NO_AUTH:-}" == "true" ]]; then
-  echo "ttyd: WARNING - unauthenticated access enabled (TTYD_NO_AUTH=true)"
-elif [[ -n "${TTYD_USER}" && -n "${TTYD_PASS}" ]]; then
+# Auth precedence: credentials take priority; TTYD_NO_AUTH=true is the explicit opt-out.
+# Setting both TTYD_NO_AUTH=true and credentials is a configuration error.
+if [[ "${TTYD_NO_AUTH:-}" == "true" && -n "${TTYD_USER:-}" && -n "${TTYD_PASS:-}" ]]; then
+  echo "ttyd: ERROR - conflicting auth config: TTYD_NO_AUTH=true set while TTYD_USER/TTYD_PASS are also configured. Unset TTYD_NO_AUTH or remove credentials."
+  exit 1
+elif [[ -n "${TTYD_USER:-}" && -n "${TTYD_PASS:-}" ]]; then
   TTYD_ARGS+=("--credential" "${TTYD_USER}:${TTYD_PASS}")
   echo "ttyd: basic auth enabled for user '${TTYD_USER}'"
+elif [[ "${TTYD_NO_AUTH:-}" == "true" ]]; then
+  echo "ttyd: WARNING - unauthenticated access enabled (TTYD_NO_AUTH=true)"
 else
   echo "ttyd: ERROR - no credentials configured. Set TTYD_USER and TTYD_PASS in .env, or set TTYD_NO_AUTH=true to explicitly disable auth."
   exit 1
