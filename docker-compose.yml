@@ -2,10 +2,13 @@ x-base: &base
   build: .
   image: clide
   env_file: .env
+  entrypoint: ["/usr/local/bin/firewall.sh"]
   environment:
     CLAUDE_CODE_SIMPLE: ${CLAUDE_CODE_SIMPLE:-1}
     CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
     CLIDE_TMUX: ${CLIDE_TMUX:-}
+  cap_add:
+    - NET_ADMIN   # required for the iptables egress firewall (CLIDE_FIREWALL=0 to disable)
   volumes:
     - ${PROJECT_DIR:-..}:/workspace
   stdin_open: true
@@ -20,8 +23,7 @@ services:
   # Web terminal (ttyd) - access all CLIs via browser
   web:
     <<: *base
-    entrypoint: ["/usr/local/bin/entrypoint.sh"]
-    command: []
+    command: ["/usr/local/bin/entrypoint.sh"]
     ports:
       - "${TTYD_PORT:-7681}:7681"
     labels:
@@ -33,8 +35,7 @@ services:
   # Interactive shell — all three CLIs available (claude config pre-seeded)
   shell:
     <<: *base
-    entrypoint: ["/usr/local/bin/claude-entrypoint.sh"]
-    command: ["/bin/bash"]
+    command: ["/usr/local/bin/claude-entrypoint.sh", "/bin/bash"]
 
   # GitHub Copilot CLI
   copilot:
@@ -49,5 +50,4 @@ services:
   # Claude Code CLI
   claude:
     <<: *base
-    entrypoint: ["/usr/local/bin/claude-entrypoint.sh"]
-    command: []
+    command: ["/usr/local/bin/claude-entrypoint.sh"]

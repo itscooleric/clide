@@ -9,6 +9,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     git \
     gnupg \
+    gosu \
+    iptables \
     tmux \
     && rm -rf /var/lib/apt/lists/*
 
@@ -49,7 +51,8 @@ RUN useradd -m -s /bin/bash -u 1000 clide \
 # Add entrypoint scripts
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY claude-entrypoint.sh /usr/local/bin/claude-entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/claude-entrypoint.sh
+COPY firewall.sh /usr/local/bin/firewall.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/claude-entrypoint.sh /usr/local/bin/firewall.sh
 
 # tmux config — mouse support, sane splits, 256-colour
 COPY --chown=clide:clide .tmux.conf /home/clide/.tmux.conf
@@ -59,6 +62,10 @@ USER clide
 
 # Install GitHub Copilot CLI (unpinned — tracks gh extension updates)
 RUN curl -fsSL https://gh.io/copilot-install | bash
+
+# Switch back to root — firewall.sh (the entrypoint) runs as root to configure
+# iptables, then drops to the clide user via gosu before exec-ing the workload.
+USER root
 
 # Auth env vars:
 #   GH_TOKEN      — GitHub fine-grained PAT with "Copilot Requests" permission

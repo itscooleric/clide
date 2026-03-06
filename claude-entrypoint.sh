@@ -6,6 +6,22 @@ mkdir -p "$HOME_DIR"
 
 export HOME="$HOME_DIR"
 
+# Set up egress firewall (CLIDE_FIREWALL=0 to disable; CLIDE_ALLOWED_HOSTS to extend).
+# Skipped when firewall.sh already ran as the entrypoint (CLIDE_FIREWALL_DONE=1).
+# In the normal docker-compose flow firewall.sh is always the entrypoint and this
+# block is never reached.  It exists as a safety net for direct invocations
+# (e.g. `docker run --entrypoint claude-entrypoint.sh`); firewall.sh is called
+# without arguments so it applies rules and returns — privilege drop via gosu
+# does not occur in that path, and the process continues here as whatever user
+# invoked the entrypoint.
+if [[ "${CLIDE_FIREWALL_DONE:-0}" != "1" ]]; then
+  # firewall.sh always exits 0 (handles all error cases internally with warnings);
+  # the || true is a defensive safety net so a truly unexpected failure never
+  # prevents the container from starting.
+  /usr/local/bin/firewall.sh || true
+  export CLIDE_FIREWALL_DONE=1
+fi
+
 node <<'NODE'
 const fs = require('fs');
 
