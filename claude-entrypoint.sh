@@ -6,6 +6,16 @@ mkdir -p "$HOME_DIR"
 
 export HOME="$HOME_DIR"
 
+# Set up egress firewall (CLIDE_FIREWALL=0 to disable; CLIDE_ALLOWED_HOSTS to extend)
+# Skip if a parent entrypoint already ran it for this container.
+if [[ "${CLIDE_FIREWALL_DONE:-0}" != "1" ]]; then
+  # firewall.sh always exits 0 (handles all error cases internally with warnings);
+  # the || true is a defensive safety net so a truly unexpected failure never
+  # prevents the container from starting.
+  /usr/local/bin/firewall.sh || true
+  export CLIDE_FIREWALL_DONE=1
+fi
+
 node <<'NODE'
 const fs = require('fs');
 
