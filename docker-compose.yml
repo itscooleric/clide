@@ -6,6 +6,7 @@ x-base: &base
     CLAUDE_CODE_SIMPLE: ${CLAUDE_CODE_SIMPLE:-1}
     CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
     CLIDE_TMUX: ${CLIDE_TMUX:-}
+    OPENAI_API_KEY: ${OPENAI_API_KEY:-}
   cap_add:
     - NET_ADMIN   # required for the iptables egress firewall (CLIDE_FIREWALL=0 to disable)
   volumes:
@@ -55,3 +56,9 @@ services:
     <<: *base
     entrypoint: ["/usr/local/bin/claude-entrypoint.sh"]
     command: []
+
+  # Codex CLI (OpenAI)
+  codex:
+    <<: *base
+    entrypoint: ["/usr/local/bin/firewall.sh"]
+    command: ["codex"]

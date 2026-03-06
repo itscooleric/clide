@@ -35,6 +35,8 @@ BASELINE_HOSTS=(
   "api.github.com"          # GitHub Copilot CLI + GitHub CLI
   "github.com"              # GitHub CLI
   "registry.npmjs.org"      # npm package updates (optional)
+  "api.openai.com"          # Codex CLI (OpenAI)
+  "auth.openai.com"         # Codex CLI — device code auth flow
 )
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

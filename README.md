@@ -18,6 +18,7 @@ Dockerized CLI toolkit with [GitHub Copilot CLI](https://github.com/github/copil
 | GitHub Copilot CLI | `copilot` | `GH_TOKEN` |
 | GitHub CLI | `gh` | `GH_TOKEN` |
 | Claude Code | `claude` | `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` |
+| Codex CLI (OpenAI) | `codex` | `OPENAI_API_KEY` (or device code flow) |
 
 ### Claude Code authentication
 
@@ -49,6 +50,26 @@ ANTHROPIC_API_KEY=sk-ant-xxxxx
    ```bash
    CLAUDE_CODE_SIMPLE=0 docker compose run --rm claude
    ```
+
+### Codex CLI (OpenAI) authentication
+
+Two auth methods are supported:
+
+#### Option 1: API key (recommended)
+
+Set `OPENAI_API_KEY` in `.env` to skip interactive auth entirely:
+```env
+OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+#### Option 2: Device code flow (browser-free OAuth)
+
+There is no browser inside the container, so the default OAuth redirect flow will not work.
+Use device code flow instead — it prints a URL and code that you visit on your **host** browser:
+```bash
+codex auth login --auth device
+# Open the printed URL in your host browser and enter the code
+```
 
 ### tmux — multi-pane workflows
 
@@ -107,6 +128,7 @@ CLIDE_TMUX=1
 ./clide shell     # interactive shell with all CLIs
 ./clide copilot   # run GitHub Copilot CLI
 ./clide claude    # run Claude Code CLI
+./clide codex     # run Codex CLI (OpenAI)
 ./clide gh repo view  # run GitHub CLI with args
 ./clide help      # show all commands
 ```
@@ -117,6 +139,7 @@ make web          # start web terminal
 make shell        # interactive shell
 make copilot      # run copilot
 make claude       # run Claude Code CLI
+make codex        # run Codex CLI (OpenAI)
 make help         # show all targets
 ```
 
@@ -172,6 +195,8 @@ By default every clide container applies an **iptables egress allowlist** at sta
 | `api.github.com` | GitHub Copilot CLI · GitHub CLI |
 | `github.com` | GitHub CLI |
 | `registry.npmjs.org` | npm package updates |
+| `api.openai.com` | Codex CLI |
+| `auth.openai.com` | Codex CLI — device code auth |
 
 DNS (port 53) and loopback traffic are always allowed.
 
