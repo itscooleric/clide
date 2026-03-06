@@ -1,8 +1,10 @@
 #!/bin/bash
 set -euo pipefail
 
-HOME_DIR="${HOME:-/home/clide}"
+# Hardcode clide's home — avoids picking up /root when entrypoint runs as root.
+HOME_DIR="/home/clide"
 mkdir -p "$HOME_DIR"
+chown clide:clide "$HOME_DIR"
 
 export HOME="$HOME_DIR"
 
@@ -52,6 +54,9 @@ if (!oauthToken && apiKey) {
 }
 
 fs.writeFileSync(configPath, JSON.stringify(next, null, 2));
+// Ensure config is owned by clide even when script runs as root
+const { execSync } = require('child_process');
+try { execSync(`chown clide:clide ${configPath}`); } catch (_) {}
 
 // Report which auth method is active
 if (oauthToken) {
@@ -75,8 +80,9 @@ fi
 
 # Opt-in tmux wrapping for shell service (set CLIDE_TMUX=1 in .env)
 # Web terminal always uses tmux via entrypoint.sh; this covers make shell / ./clide shell.
+# Drop privileges to clide via gosu before exec so the workload never runs as root.
 if [[ -n "${CLIDE_TMUX:-}" ]]; then
-  exec tmux new-session -A -s main "${@:-claude}"
+  exec gosu clide tmux new-session -A -s main "${@:-claude}"
 fi
 
-exec "${@:-claude}"
+exec gosu clide "${@:-claude}"
