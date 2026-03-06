@@ -43,6 +43,10 @@ RUN ARCH="$(uname -m)" \
 # hadolint ignore=DL3016
 RUN npm install -g @anthropic-ai/claude-code
 
+# Install Codex CLI (unpinned — tracks new features intentionally)
+# hadolint ignore=DL3016
+RUN npm install -g @openai/codex
+
 # Install Python 3 + dev tooling into an isolated venv
 # - python3-venv provides the venv module (not always bundled in minimal images)
 # - /opt/pyenv is world-readable so the unprivileged clide user can run tools

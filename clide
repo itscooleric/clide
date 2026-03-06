@@ -16,6 +16,7 @@ Commands:
   copilot     Run GitHub Copilot CLI
   gh [args]   Run GitHub CLI (pass args after)
   claude      Run Claude Code CLI
+  codex       Run Codex CLI (OpenAI)
   build       Build the Docker image
   rebuild     Rebuild the Docker image (no cache)
   logs        Follow web terminal logs
@@ -28,6 +29,7 @@ Examples:
   ./clide copilot                # run copilot
   ./clide gh repo view           # run gh with args
   PROJECT_DIR=~/myrepo ./clide shell  # mount a specific project
+  ./clide codex                  # run Codex CLI (OpenAI)
 EOF
 }
 
@@ -41,7 +43,7 @@ splash() {
   echo "  ╚═════╝╚══════╝╚═╝╚═════╝ ╚══════╝"
   echo ""
   echo "  CLI Development Environment"
-  echo "  Copilot · GitHub CLI · Claude Code"
+  echo "  Copilot · GitHub CLI · Claude Code · Codex CLI"
   echo ""
 }
 
@@ -72,6 +74,10 @@ case "${1:-help}" in
   claude)
     splash
     CLAUDE_CODE_SIMPLE=1 docker compose run --rm claude
+    ;;
+  codex)
+    splash
+    docker compose run --rm codex
     ;;
   build)
     docker compose build
