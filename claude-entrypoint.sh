@@ -15,7 +15,7 @@ if [[ "${CLIDE_FIREWALL_DONE:-0}" != "1" ]]; then
   export CLIDE_FIREWALL_DONE=1
 fi
 
-node <<'NODE'
+gosu clide node <<'NODE'
 const fs = require('fs');
 
 const configPath = `${process.env.HOME}/.claude.json`;
