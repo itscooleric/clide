@@ -63,7 +63,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV PATH="/opt/pyenv/bin:${PATH}"
 
 # Create unprivileged user and set up workspace
-RUN useradd -m -s /bin/bash -u 1000 clide \
+RUN useradd -m -s /bin/bash -u 1001 clide \
     && mkdir -p /workspace \
     && chown clide:clide /workspace
 
