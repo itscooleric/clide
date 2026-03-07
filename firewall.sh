@@ -100,7 +100,9 @@ if [[ -n "${CLIDE_ALLOWED_HOSTS:-}" ]]; then
   done <<< "$normalized"
 fi
 
-# 6. Reject all other outbound traffic (REJECT gives immediate feedback vs DROP's timeout)
+# 6. Log then reject all other outbound traffic
+_ipt -A OUTPUT -m limit --limit 10/min --limit-burst 5 -j LOG --log-prefix "CLIDE-REJECT: " --log-level 4
+_ip6 -A OUTPUT -m limit --limit 10/min --limit-burst 5 -j LOG --log-prefix "CLIDE-REJECT: " --log-level 4
 _ipt -A OUTPUT -j REJECT --reject-with icmp-port-unreachable
 _ip6 -A OUTPUT -j REJECT
 
