@@ -13,6 +13,8 @@ x-base: &base
     - ALL
   cap_add:
     - NET_ADMIN
+    - SETUID
+    - SETGID
   # Prevent processes from gaining new privileges via setuid/setgid binaries.
   security_opt:
     - no-new-privileges:true
