@@ -226,7 +226,7 @@ See [`DEPLOY.md`](./DEPLOY.md) for Caddy Docker Proxy integration. Uses `docker-
 | Docker Engine | 20.10+ |
 | Docker Compose | v2.0+ (`docker compose`, not `docker-compose`) |
 
-### Architecture
+### CPU architecture
 
 | Arch | Status |
 |---|---|
@@ -242,7 +242,7 @@ See [`DEPLOY.md`](./DEPLOY.md) for Caddy Docker Proxy integration. Uses `docker-
 | Safari | ✅ Supported |
 | Edge | ✅ Supported |
 
-### Egress firewall
+### Egress firewall support
 
 The `iptables` egress firewall requires the `NET_ADMIN` capability and a Linux kernel with `iptables` support. It works out of the box on Linux hosts and Docker Desktop (macOS/Windows). If unavailable, the firewall degrades gracefully — a warning is printed and egress is unrestricted.
 

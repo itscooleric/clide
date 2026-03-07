@@ -6,7 +6,7 @@ This document describes the trust boundaries, attack surface, known threats, and
 
 ## Trust boundaries
 
-```
+```text
 ┌─────────────────────────────────────────────────────┐
 │  Host Machine                                        │
 │                                                      │
