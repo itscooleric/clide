@@ -43,6 +43,10 @@ RUN ARCH="$(uname -m)" \
 # hadolint ignore=DL3016
 RUN npm install -g @anthropic-ai/claude-code
 
+# Install Codex CLI (unpinned — tracks new features intentionally)
+# hadolint ignore=DL3016,DL3059
+RUN npm install -g @openai/codex
+
 # Install Python 3 + dev tooling into an isolated venv
 # - python3-venv provides the venv module (not always bundled in minimal images)
 # - /opt/pyenv is world-readable so the unprivileged clide user can run tools
@@ -59,7 +63,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV PATH="/opt/pyenv/bin:${PATH}"
 
 # Create unprivileged user and set up workspace
-RUN useradd -m -s /bin/bash -u 1000 clide \
+RUN useradd -m -s /bin/bash -u 1001 clide \
     && mkdir -p /workspace \
     && chown clide:clide /workspace
 

@@ -2,6 +2,46 @@
 
 Dockerized CLI toolkit with [GitHub Copilot CLI](https://github.com/github/copilot-cli), [GitHub CLI](https://cli.github.com/), and [Claude Code](https://www.anthropic.com/claude/code) — agentic terminal assistants in one container. Run against any local project without installing anything on your host. Access via terminal or browser-based web terminal.
 
+## Architecture
+
+```mermaid
+graph TB
+    subgraph Host["Host Machine"]
+        workspace["📁 Project Directory\n(mounted as /workspace)"]
+        env[".env\n(secrets — gitignored)"]
+        browser["🌐 Browser\nlocalhost:7681"]
+    end
+
+    subgraph Container["clide Container (non-root: clide uid=1000)"]
+        direction TB
+        firewall["🔥 firewall.sh\n(iptables egress allowlist)"]
+
+        subgraph Services["Services"]
+            web["web\n(ttyd → tmux)"]
+            shell["shell\n(bash)"]
+            claude["claude\nClaude Code CLI"]
+            copilot["copilot\nGitHub Copilot CLI"]
+            gh["gh\nGitHub CLI"]
+        end
+    end
+
+    subgraph Internet["Internet (allowlisted endpoints only)"]
+        anthropic["api.anthropic.com\nClaude Code"]
+        ghcopilot["api.githubcopilot.com\nGitHub Copilot"]
+        github["api.github.com\ngithub.com\nGitHub CLI"]
+        npm["registry.npmjs.org\nnpm"]
+    end
+
+    browser -->|"HTTP (ttyd)"| web
+    workspace -->|"bind mount"| Container
+    env -->|"env vars"| Container
+    firewall --> Services
+    Services -->|"blocked by default"| firewall
+    firewall -->|"allowlisted"| Internet
+```
+
+> **Trust boundary:** the host trusts the container with a read-write mount of your project directory and your API credentials via `.env`. The container cannot reach the internet beyond the allowlisted endpoints (when `NET_ADMIN` is available). See [`SECURITY.md`](./SECURITY.md) for the full threat model.
+
 ## Prerequisites
 
 - Docker + Docker Compose
@@ -18,6 +58,7 @@ Dockerized CLI toolkit with [GitHub Copilot CLI](https://github.com/github/copil
 | GitHub Copilot CLI | `copilot` | `GH_TOKEN` |
 | GitHub CLI | `gh` | `GH_TOKEN` |
 | Claude Code | `claude` | `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` |
+| Codex CLI (OpenAI) | `codex` | `OPENAI_API_KEY` (or device code flow) |
 
 ### Claude Code authentication
 
@@ -49,6 +90,26 @@ ANTHROPIC_API_KEY=sk-ant-xxxxx
    ```bash
    CLAUDE_CODE_SIMPLE=0 docker compose run --rm claude
    ```
+
+### Codex CLI (OpenAI) authentication
+
+Two auth methods are supported:
+
+#### Option 1: API key (recommended)
+
+Set `OPENAI_API_KEY` in `.env` to skip interactive auth entirely:
+```env
+OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+#### Option 2: Device code flow (browser-free OAuth)
+
+There is no browser inside the container, so the default OAuth redirect flow will not work.
+Use device code flow instead — it prints a URL and code that you visit on your **host** browser:
+```bash
+codex auth login --auth device
+# Open the printed URL in your host browser and enter the code
+```
 
 ### tmux — multi-pane workflows
 
@@ -107,6 +168,7 @@ CLIDE_TMUX=1
 ./clide shell     # interactive shell with all CLIs
 ./clide copilot   # run GitHub Copilot CLI
 ./clide claude    # run Claude Code CLI
+./clide codex     # run Codex CLI (OpenAI)
 ./clide gh repo view  # run GitHub CLI with args
 ./clide help      # show all commands
 ```
@@ -117,6 +179,7 @@ make web          # start web terminal
 make shell        # interactive shell
 make copilot      # run copilot
 make claude       # run Claude Code CLI
+make codex        # run Codex CLI (OpenAI)
 make help         # show all targets
 ```
 
@@ -143,6 +206,14 @@ Your project is mounted at `/workspace` inside the container.
 ### Bernard/Forge deployment
 See [`DEPLOY.md`](./DEPLOY.md) for Caddy Docker Proxy integration. Uses `docker-compose.override.yml` (gitignored) for reverse proxy config that persists across git pulls.
 
+## Additional docs
+
+| Doc | Contents |
+|---|---|
+| [`SECURITY.md`](./SECURITY.md) | Threat model, trust boundaries, attack surface, hardening recommendations |
+| [`RUNBOOK.md`](./RUNBOOK.md) | Operational runbook — health checks, logs, rebuilds, credential rotation, troubleshooting |
+| [`DEPLOY.md`](./DEPLOY.md) | Production deployment with Caddy reverse proxy |
+
 ## Notes
 
 - Tokens don't expire unless you set an expiry — set them once in `.env` and you're done. OAuth tokens from `claude setup-token` are valid for 1 year.
@@ -159,6 +230,45 @@ See [`DEPLOY.md`](./DEPLOY.md) for Caddy Docker Proxy integration. Uses `docker-
    make claude
    ```
 
+## Compatibility
+
+### Host OS
+
+| OS | Status | Notes |
+|---|---|---|
+| Linux | ✅ Supported | Native Docker — full functionality including egress firewall |
+| macOS (Apple Silicon) | ✅ Supported | Docker Desktop required; `arm64` image builds natively |
+| macOS (Intel) | ✅ Supported | Docker Desktop required |
+| Windows (WSL2) | ✅ Supported | Docker Desktop with WSL2 backend required |
+| Windows (no WSL2) | ⚠️ Partial | Egress firewall requires `NET_ADMIN`; availability varies by runtime |
+
+### Docker
+
+| Requirement | Minimum |
+|---|---|
+| Docker Engine | 20.10+ |
+| Docker Compose | v2.0+ (`docker compose`, not `docker-compose`) |
+
+### CPU architecture
+
+| Arch | Status |
+|---|---|
+| `amd64` (x86_64) | ✅ Supported |
+| `arm64` (Apple Silicon, Graviton) | ✅ Supported |
+
+### Web terminal browser support
+
+| Browser | Status |
+|---|---|
+| Chrome / Chromium | ✅ Supported |
+| Firefox | ✅ Supported |
+| Safari | ✅ Supported |
+| Edge | ✅ Supported |
+
+### Egress firewall support
+
+The `iptables` egress firewall requires the `NET_ADMIN` capability and a Linux kernel with `iptables` support. It works out of the box on Linux hosts and Docker Desktop (macOS/Windows). If unavailable, the firewall degrades gracefully — a warning is printed and egress is unrestricted.
+
 ## Egress firewall
 
 By default every clide container applies an **iptables egress allowlist** at startup, restricting outbound traffic to the known service endpoints.  All bundled CLIs continue to work normally within these defaults.
@@ -172,6 +282,8 @@ By default every clide container applies an **iptables egress allowlist** at sta
 | `api.github.com` | GitHub Copilot CLI · GitHub CLI |
 | `github.com` | GitHub CLI |
 | `registry.npmjs.org` | npm package updates |
+| `api.openai.com` | Codex CLI |
+| `auth.openai.com` | Codex CLI — device code auth |
 
 DNS (port 53) and loopback traffic are always allowed.
 

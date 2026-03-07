@@ -3,9 +3,6 @@ set -euo pipefail
 
 # Hardcode clide's home — avoids picking up /root when entrypoint runs as root.
 HOME_DIR="/home/clide"
-mkdir -p "$HOME_DIR"
-chown clide:clide "$HOME_DIR"
-
 export HOME="$HOME_DIR"
 
 # Set up egress firewall (CLIDE_FIREWALL=0 to disable; CLIDE_ALLOWED_HOSTS to extend)
@@ -18,7 +15,7 @@ if [[ "${CLIDE_FIREWALL_DONE:-0}" != "1" ]]; then
   export CLIDE_FIREWALL_DONE=1
 fi
 
-node <<'NODE'
+gosu clide node <<'NODE'
 const fs = require('fs');
 
 const configPath = `${process.env.HOME}/.claude.json`;
