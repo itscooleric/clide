@@ -30,13 +30,16 @@ echo "firewall: configuring egress allowlist..."
 
 # ── Baseline allowed hosts ────────────────────────────────────────────────────
 BASELINE_HOSTS=(
-  "api.anthropic.com"       # Claude Code
-  "api.githubcopilot.com"   # GitHub Copilot CLI
-  "api.github.com"          # GitHub Copilot CLI + GitHub CLI
-  "github.com"              # GitHub CLI
-  "registry.npmjs.org"      # npm package updates (optional)
-  "api.openai.com"          # Codex CLI (OpenAI)
-  "auth.openai.com"         # Codex CLI — device code auth flow
+  "api.anthropic.com"            # Claude Code
+  "api.githubcopilot.com"        # GitHub Copilot CLI
+  "api.github.com"               # GitHub Copilot CLI + GitHub CLI
+  "github.com"                   # GitHub CLI + git over HTTPS
+  "objects.githubusercontent.com" # git pack objects (clone/fetch/pull)
+  "raw.githubusercontent.com"    # raw file access
+  "uploads.github.com"           # gh push / release uploads
+  "registry.npmjs.org"           # npm package updates (optional)
+  "api.openai.com"               # Codex CLI (OpenAI)
+  "auth.openai.com"              # Codex CLI — device code auth flow
 )
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
