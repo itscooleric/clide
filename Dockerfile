@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     git \
     gnupg \
+    gosu \
     iptables \
     tmux \
     && rm -rf /var/lib/apt/lists/*
@@ -81,7 +82,17 @@ RUN curl -fsSL https://gh.io/copilot-install | bash
 #   GH_TOKEN      — GitHub fine-grained PAT with "Copilot Requests" permission
 #   ANTHROPIC_API_KEY — Anthropic API key for Claude Code
 
+# Switch back to root so entrypoints start as root; privilege drop to clide
+# is handled by gosu inside each entrypoint script after firewall setup.
+# hadolint ignore=DL3002
+USER root
+
 WORKDIR /workspace
+
+# Health check — confirms the web terminal is accepting connections.
+# Port is validated as numeric to prevent injection; base path is respected.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD sh -c 'PORT="${TTYD_PORT:-7681}"; case "$PORT" in (""|*[!0-9]*) PORT=7681 ;; esac; curl -f "http://localhost:${PORT}${TTYD_BASE_PATH:-/}" || exit 1'
 
 # Default to bash shell (can be overridden by command in docker-compose)
 CMD ["/bin/bash"]

@@ -8,21 +8,21 @@
 # ── Opt-out ───────────────────────────────────────────────────────────────────
 if [[ "${CLIDE_FIREWALL:-1}" == "0" ]]; then
   echo "firewall: disabled (CLIDE_FIREWALL=0)"
-  if [[ $# -gt 0 ]]; then exec "$@"; fi
+  if [[ $# -gt 0 ]]; then exec gosu clide "$@"; fi
   exit 0
 fi
 
 # ── Sanity checks ─────────────────────────────────────────────────────────────
 if ! command -v iptables >/dev/null 2>&1; then
   echo "firewall: WARNING - iptables not found, skipping egress filter"
-  if [[ $# -gt 0 ]]; then exec "$@"; fi
+  if [[ $# -gt 0 ]]; then exec gosu clide "$@"; fi
   exit 0
 fi
 
 if ! iptables -L OUTPUT -n >/dev/null 2>&1; then
   echo "firewall: WARNING - cannot access iptables (missing NET_ADMIN capability)"
   echo "firewall: add 'cap_add: [NET_ADMIN]' to your docker-compose.yml to enable the firewall"
-  if [[ $# -gt 0 ]]; then exec "$@"; fi
+  if [[ $# -gt 0 ]]; then exec gosu clide "$@"; fi
   exit 0
 fi
 
@@ -101,7 +101,8 @@ _ip6 -A OUTPUT -j REJECT
 
 echo "firewall: egress allowlist active — all other outbound traffic rejected"
 
-# ── If used as entrypoint, exec the supplied command ─────────────────────────
+# ── If used as entrypoint, drop to unprivileged user and exec the command ────
+# iptables rules are now in place; gosu drops root before the workload starts.
 if [[ $# -gt 0 ]]; then
-  exec "$@"
+  exec gosu clide "$@"
 fi
