@@ -27,23 +27,23 @@ chown clide:clide "$CLIDE_DIR" 2>/dev/null || {
 }
 
 # Symlink ~/.claude → /workspace/.clide so Claude Code reads/writes into the
-# workspace-local directory.  Remove any stale file/dir first (e.g. from a
-# previous named-volume mount).
+# workspace-local directory.  Run as clide since /home/clide is owned by the
+# clide user and root may lack DAC_OVERRIDE to write there.
+# Remove any stale file/dir first (e.g. from a previous named-volume mount).
 if [[ -L "$HOME_DIR/.claude" ]]; then
   # Already a symlink — verify target
   if [[ "$(readlink "$HOME_DIR/.claude")" != "$CLIDE_DIR" ]]; then
-    rm -f "$HOME_DIR/.claude"
-    ln -s "$CLIDE_DIR" "$HOME_DIR/.claude"
+    gosu clide rm -f "$HOME_DIR/.claude"
+    gosu clide ln -s "$CLIDE_DIR" "$HOME_DIR/.claude"
   fi
 elif [[ -d "$HOME_DIR/.claude" ]]; then
   # Migrate existing data from old named-volume mount into workspace
   cp -a "$HOME_DIR/.claude/." "$CLIDE_DIR/" 2>/dev/null || true
-  rm -rf "$HOME_DIR/.claude"
-  ln -s "$CLIDE_DIR" "$HOME_DIR/.claude"
+  gosu clide rm -rf "$HOME_DIR/.claude"
+  gosu clide ln -s "$CLIDE_DIR" "$HOME_DIR/.claude"
 else
-  ln -s "$CLIDE_DIR" "$HOME_DIR/.claude"
+  gosu clide ln -s "$CLIDE_DIR" "$HOME_DIR/.claude"
 fi
-chown -h clide:clide "$HOME_DIR/.claude" 2>/dev/null || true
 
 # Seed CLAUDE.md into the workspace if a template exists and no CLAUDE.md is present.
 # This gives every session a baseline set of instructions without overwriting user edits.
