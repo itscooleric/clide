@@ -78,7 +78,7 @@ ENV PATH="/opt/pyenv/bin:${PATH}"
 ARG CLIDE_UID=1000
 ARG CLIDE_GID=1000
 RUN groupadd -g "${CLIDE_GID}" clide \
-    && useradd -m -s /bin/bash -u "${CLIDE_UID}" -g clide clide \
+    && useradd -m -l -s /bin/bash -u "${CLIDE_UID}" -g clide clide \
     && mkdir -p /workspace \
     && chown clide:clide /workspace \
     # Hand venv ownership to clide so pip install works without sudo
