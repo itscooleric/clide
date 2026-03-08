@@ -1,46 +1,43 @@
 # clide
 
-Dockerized CLI toolkit with [GitHub Copilot CLI](https://github.com/github/copilot-cli), [GitHub CLI](https://cli.github.com/), and [Claude Code](https://www.anthropic.com/claude/code) — agentic terminal assistants in one container. Run against any local project without installing anything on your host. Access via terminal or browser-based web terminal.
+```
+
+   ██████ ██      ██ ██████  ███████
+  ██      ██      ██ ██   ██ ██
+  ██      ██      ██ ██   ██ █████
+  ██      ██      ██ ██   ██ ██
+   ██████ ███████ ██ ██████  ███████
+
+  sandboxed agentic terminal        v3
+  ──────────────────────────────────────
+
+  your project ──bind mount──► /workspace
+  .env secrets ──env vars────► container
+  browser :7681 ──ttyd───────► web shell
+
+  ┌────────────────────────────────────┐
+  │  claude  copilot  codex  gh  bash  │
+  │          web (ttyd + tmux)         │
+  └──────────────┬─────────────────────┘
+            firewall.sh
+           egress allowlist
+                 │
+                 ▼
+     api.anthropic.com    claude
+     api.githubcopilot.com copilot
+     api.github.com        gh
+     api.openai.com        codex
+     *everything else      REJECT
+
+  ──────────────────────────────────────
+  non-root. network-restricted.
+  nothing installed on your host.
+
+```
+
+Dockerized CLI toolkit — [Claude Code](https://www.anthropic.com/claude/code), [GitHub Copilot CLI](https://github.com/github/copilot-cli), [Codex CLI](https://github.com/openai/codex), and [GitHub CLI](https://cli.github.com/) in one sandboxed container with egress firewall and browser-based web terminal.
 
 ## Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  Host Machine                                               │
-│                                                             │
-│  📁 Project Dir ──bind mount──┐                             │
-│  .env (secrets) ──env vars───┐│                             │
-│  🌐 Browser :7681 ──HTTP────┐││                             │
-│                              │││                             │
-│  ┌───────────────────────────┼┼┼───────────────────────────┐│
-│  │  clide Container          │││  (non-root: clide uid=1000)│
-│  │                           │││                            ││
-│  │  🔥 firewall.sh ──────── │┼┼──── iptables egress       ││
-│  │       │                   │││     allowlist              ││
-│  │       ▼                   ▼▼▼                            ││
-│  │  ┌─────────────────────────────────────────────┐        ││
-│  │  │  Services                                   │        ││
-│  │  │  web (ttyd→tmux)  shell (bash)              │        ││
-│  │  │  claude    copilot    gh    codex            │        ││
-│  │  └──────────────────────┬──────────────────────┘        ││
-│  │                         │ blocked by default             ││
-│  │                    firewall                              ││
-│  │                         │ allowlisted only               ││
-│  └─────────────────────────┼────────────────────────────────┘│
-│                            │                                 │
-└────────────────────────────┼─────────────────────────────────┘
-                             │
-                             ▼
-        ┌────────────────────────────────────────┐
-        │  Internet (allowlisted endpoints only) │
-        │                                        │
-        │  api.anthropic.com     Claude Code     │
-        │  api.githubcopilot.com GitHub Copilot  │
-        │  api.github.com        GitHub CLI      │
-        │  registry.npmjs.org    npm             │
-        │  api.openai.com        Codex CLI       │
-        └────────────────────────────────────────┘
-```
 
 > **Trust boundary:** the host trusts the container with a read-write mount of your project directory and your API credentials via `.env`. The container cannot reach the internet beyond the allowlisted endpoints (when `NET_ADMIN` is available). See [`SECURITY.md`](./SECURITY.md) for the full threat model.
 
