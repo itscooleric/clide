@@ -1,5 +1,9 @@
 x-base: &base
-  build: .
+  build:
+    context: .
+    args:
+      CLIDE_UID: ${CLIDE_UID:-1000}
+      CLIDE_GID: ${CLIDE_GID:-1000}
   image: clide
   env_file: .env
   environment:
@@ -9,8 +13,12 @@ x-base: &base
     OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     GITLAB_TOKEN: ${GITLAB_TOKEN:-}
     GITLAB_HOST: ${GITLAB_HOST:-}
-  # Drop all capabilities then re-add only what the firewall needs.
-  # NET_ADMIN is required for iptables egress rules; set CLIDE_FIREWALL=0 to disable.
+  # Drop all capabilities then re-add only what entrypoint + firewall need.
+  # NET_ADMIN  — iptables egress rules (set CLIDE_FIREWALL=0 to disable)
+  # SETUID/GID — gosu privilege drop from root → clide
+  # CHOWN/FOWNER — ownership fixup on bind-mounted workspace
+  # DAC_OVERRIDE — lets root bypass host-UID permission checks on bind mounts
+  #                (required for mkdir /workspace/.clide during setup)
   cap_drop:
     - ALL
   cap_add:
@@ -19,6 +27,7 @@ x-base: &base
     - SETGID
     - CHOWN
     - FOWNER
+    - DAC_OVERRIDE
   # Prevent processes from gaining new privileges via setuid/setgid binaries.
   security_opt:
     - no-new-privileges:true
