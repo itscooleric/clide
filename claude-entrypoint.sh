@@ -96,6 +96,17 @@ elif [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
   unset ANTHROPIC_API_KEY
 fi
 
+# Wire glab auth — best-effort, missing token doesn't block startup.
+if [[ -n "${GITLAB_TOKEN:-}" && -n "${GITLAB_HOST:-}" ]]; then
+  gosu clide glab config set token "${GITLAB_TOKEN}" --host "${GITLAB_HOST}" 2>/dev/null \
+    && echo "claude: glab authenticated for ${GITLAB_HOST}" \
+    || echo "claude: WARNING - glab config failed; continuing without GitLab auth"
+elif [[ -n "${GITLAB_TOKEN:-}" ]]; then
+  gosu clide glab config set token "${GITLAB_TOKEN}" --host "gitlab.com" 2>/dev/null \
+    && echo "claude: glab authenticated for gitlab.com" \
+    || echo "claude: WARNING - glab config failed; continuing without GitLab auth"
+fi
+
 # Opt-in tmux wrapping for shell service (set CLIDE_TMUX=1 in .env)
 # Web terminal always uses tmux via entrypoint.sh; this covers make shell / ./clide shell.
 # Drop privileges to clide via gosu before exec so the workload never runs as root.

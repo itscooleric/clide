@@ -1,45 +1,43 @@
 # clide
 
-Dockerized CLI toolkit with [GitHub Copilot CLI](https://github.com/github/copilot-cli), [GitHub CLI](https://cli.github.com/), and [Claude Code](https://www.anthropic.com/claude/code) — agentic terminal assistants in one container. Run against any local project without installing anything on your host. Access via terminal or browser-based web terminal.
+```text
+
+   ██████ ██      ██ ██████  ███████
+  ██      ██      ██ ██   ██ ██
+  ██      ██      ██ ██   ██ █████
+  ██      ██      ██ ██   ██ ██
+   ██████ ███████ ██ ██████  ███████
+
+  sandboxed agentic terminal        v3
+  ──────────────────────────────────────
+
+  your project ──bind mount──► /workspace
+  .env secrets ──env vars────► container
+  browser :7681 ──ttyd───────► web shell
+
+  ┌────────────────────────────────────┐
+  │  claude  copilot  codex  gh  bash  │
+  │          web (ttyd + tmux)         │
+  └──────────────┬─────────────────────┘
+            firewall.sh
+           egress allowlist
+                 │
+                 ▼
+     api.anthropic.com    claude
+     api.githubcopilot.com copilot
+     api.github.com        gh
+     api.openai.com        codex
+     *everything else      REJECT
+
+  ──────────────────────────────────────
+  non-root. network-restricted.
+  nothing installed on your host.
+
+```
+
+Dockerized CLI toolkit — [Claude Code](https://www.anthropic.com/claude/code), [GitHub Copilot CLI](https://github.com/github/copilot-cli), [Codex CLI](https://github.com/openai/codex), and [GitHub CLI](https://cli.github.com/) in one sandboxed container with egress firewall and browser-based web terminal.
 
 ## Architecture
-
-```mermaid
-graph TB
-    subgraph Host["Host Machine"]
-        workspace["📁 Project Directory\n(mounted as /workspace)"]
-        env[".env\n(secrets — gitignored)"]
-        browser["🌐 Browser\nlocalhost:7681"]
-    end
-
-    subgraph Container["clide Container (non-root: clide uid=1000)"]
-        direction TB
-        firewall["🔥 firewall.sh\n(iptables egress allowlist)"]
-
-        subgraph Services["Services"]
-            web["web\n(ttyd → tmux)"]
-            shell["shell\n(bash)"]
-            claude["claude\nClaude Code CLI"]
-            copilot["copilot\nGitHub Copilot CLI"]
-            gh["gh\nGitHub CLI"]
-            codex["codex\nCodex CLI"]
-        end
-    end
-
-    subgraph Internet["Internet (allowlisted endpoints only)"]
-        anthropic["api.anthropic.com\nClaude Code"]
-        ghcopilot["api.githubcopilot.com\nGitHub Copilot"]
-        github["api.github.com\ngithub.com\nGitHub CLI"]
-        npm["registry.npmjs.org\nnpm"]
-    end
-
-    browser -->|"HTTP (ttyd)"| web
-    workspace -->|"bind mount"| Container
-    env -->|"env vars"| Container
-    firewall --> Services
-    Services -->|"blocked by default"| firewall
-    firewall -->|"allowlisted"| Internet
-```
 
 > **Trust boundary:** the host trusts the container with a read-write mount of your project directory and your API credentials via `.env`. The container cannot reach the internet beyond the allowlisted endpoints (when `NET_ADMIN` is available). See [`SECURITY.md`](./SECURITY.md) for the full threat model.
 
@@ -60,6 +58,7 @@ graph TB
 | GitHub CLI | `gh` | `GH_TOKEN` |
 | Claude Code | `claude` | `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` |
 | Codex CLI (OpenAI) | `codex` | `OPENAI_API_KEY` (or device code flow) |
+| GitLab CLI | `glab` | `GITLAB_TOKEN` + `GITLAB_HOST` |
 
 ### Claude Code authentication
 
