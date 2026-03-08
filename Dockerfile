@@ -73,7 +73,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV PATH="/opt/pyenv/bin:${PATH}"
 
 # Create unprivileged user and set up workspace
-RUN useradd -m -s /bin/bash -u 1001 clide \
+# UID/GID default to 1000 (standard first non-root user on Linux/macOS).
+# Override at build time:  CLIDE_UID=$(id -u) CLIDE_GID=$(id -g) docker compose build
+ARG CLIDE_UID=1000
+ARG CLIDE_GID=1000
+RUN groupadd -g "${CLIDE_GID}" clide \
+    && useradd -m -s /bin/bash -u "${CLIDE_UID}" -g clide clide \
     && mkdir -p /workspace \
     && chown clide:clide /workspace \
     # Hand venv ownership to clide so pip install works without sudo
