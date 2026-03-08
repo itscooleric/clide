@@ -9,7 +9,7 @@ with Claude Code, GitHub Copilot, GitHub CLI, and Codex pre-installed.
 - You are running as user `clide` (uid 1001)
 - Egress is restricted to an allowlist (see firewall.sh)
 - Python venv is at `/opt/pyenv` (pytest and ruff pre-installed)
-- Session memory persists across container restarts in `~/.claude/`
+- Session memory persists across container restarts in `/workspace/.clide/`
 
 ## Conventions
 
