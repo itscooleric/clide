@@ -39,13 +39,14 @@ RUN ARCH="$(uname -m)" \
        -o /usr/local/bin/ttyd \
     && chmod +x /usr/local/bin/ttyd
 
-# Install Claude Code CLI (unpinned — tracks new features intentionally)
-# hadolint ignore=DL3016
-RUN npm install -g @anthropic-ai/claude-code
+# Install Claude Code CLI (pinned — bump ARG to upgrade)
+ARG CLAUDE_CODE_VERSION=2.1.71
+RUN npm install -g "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}"
 
-# Install Codex CLI (unpinned — tracks new features intentionally)
-# hadolint ignore=DL3016,DL3059
-RUN npm install -g @openai/codex
+# Install Codex CLI (pinned — bump ARG to upgrade)
+# hadolint ignore=DL3059
+ARG CODEX_VERSION=0.112.0
+RUN npm install -g "@openai/codex@${CODEX_VERSION}"
 
 # Install glab (GitLab CLI) — pinned version, single binary
 ARG GLAB_VERSION=1.47.0
@@ -67,8 +68,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && python3 -m venv /opt/pyenv \
     && /opt/pyenv/bin/pip install --no-cache-dir \
-       pytest \
-       ruff
+       pytest==9.0.2 \
+       ruff==0.15.5
 
 ENV PATH="/opt/pyenv/bin:${PATH}"
 
