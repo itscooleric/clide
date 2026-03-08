@@ -78,7 +78,7 @@ ENV PATH="/opt/pyenv/bin:${PATH}"
 # Override at build time:  CLIDE_UID=$(id -u) CLIDE_GID=$(id -g) docker compose build
 ARG CLIDE_UID=1000
 ARG CLIDE_GID=1000
-RUN groupadd -g "${CLIDE_GID}" clide \
+RUN groupadd -g "${CLIDE_GID}" clide 2>/dev/null || groupmod -n clide "$(getent group "${CLIDE_GID}" | cut -d: -f1)" \
     && useradd -m -l -s /bin/bash -u "${CLIDE_UID}" -g clide clide \
     && mkdir -p /workspace \
     && chown clide:clide /workspace \
