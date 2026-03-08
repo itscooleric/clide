@@ -3,9 +3,6 @@ set -euo pipefail
 
 # Hardcode clide's home — avoids picking up /root when entrypoint runs as root.
 HOME_DIR="/home/clide"
-mkdir -p "$HOME_DIR"
-chown clide:clide "$HOME_DIR"
-
 export HOME="$HOME_DIR"
 
 # Set up egress firewall (CLIDE_FIREWALL=0 to disable; CLIDE_ALLOWED_HOSTS to extend)
@@ -18,7 +15,28 @@ if [[ "${CLIDE_FIREWALL_DONE:-0}" != "1" ]]; then
   export CLIDE_FIREWALL_DONE=1
 fi
 
-node <<'NODE'
+# Seed CLAUDE.md into the workspace if a template exists and no CLAUDE.md is present.
+# This gives every session a baseline set of instructions without overwriting user edits.
+# Template search order: /workspace/.claude/CLAUDE.md.template, then bundled default.
+CLAUDE_MD="/workspace/CLAUDE.md"
+if [[ ! -f "$CLAUDE_MD" ]]; then
+  TEMPLATE=""
+  if [[ -f "/workspace/.claude/CLAUDE.md.template" ]]; then
+    TEMPLATE="/workspace/.claude/CLAUDE.md.template"
+  elif [[ -f "/usr/local/share/clide/CLAUDE.md.template" ]]; then
+    TEMPLATE="/usr/local/share/clide/CLAUDE.md.template"
+  fi
+  if [[ -n "$TEMPLATE" ]]; then
+    cp "$TEMPLATE" "$CLAUDE_MD"
+    chown clide:clide "$CLAUDE_MD"
+    echo "claude: seeded CLAUDE.md from ${TEMPLATE}"
+  fi
+fi
+
+# Ensure the persistent volume directory is owned by clide (first-run fix for named volumes)
+chown -R clide:clide "$HOME_DIR/.claude" 2>/dev/null || true
+
+gosu clide node <<'NODE'
 const fs = require('fs');
 
 const configPath = `${process.env.HOME}/.claude.json`;

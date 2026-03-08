@@ -6,12 +6,15 @@ x-base: &base
     CLAUDE_CODE_SIMPLE: ${CLAUDE_CODE_SIMPLE:-1}
     CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
     CLIDE_TMUX: ${CLIDE_TMUX:-}
+    OPENAI_API_KEY: ${OPENAI_API_KEY:-}
   # Drop all capabilities then re-add only what the firewall needs.
   # NET_ADMIN is required for iptables egress rules; set CLIDE_FIREWALL=0 to disable.
   cap_drop:
     - ALL
   cap_add:
     - NET_ADMIN
+    - SETUID
+    - SETGID
   # Prevent processes from gaining new privileges via setuid/setgid binaries.
   security_opt:
     - no-new-privileges:true
@@ -21,6 +24,7 @@ x-base: &base
   pids_limit: 512
   volumes:
     - ${PROJECT_DIR:-..}:/workspace
+    - claude-data:/home/clide/.claude
   stdin_open: true
   tty: true
 
@@ -66,3 +70,14 @@ services:
     <<: *base
     entrypoint: ["/usr/local/bin/claude-entrypoint.sh"]
     command: []
+
+  # Codex CLI (OpenAI)
+  codex:
+    <<: *base
+    entrypoint: ["/usr/local/bin/firewall.sh"]
+    command: ["codex"]
+
+# Named volumes — persist state across container restarts.
+# claude-data: Claude Code session memory, settings, and project learnings (~/.claude)
+volumes:
+  claude-data:
