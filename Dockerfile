@@ -47,6 +47,14 @@ RUN npm install -g @anthropic-ai/claude-code
 # hadolint ignore=DL3016,DL3059
 RUN npm install -g @openai/codex
 
+# Install glab (GitLab CLI) — pinned version, single binary
+ARG GLAB_VERSION=1.47.0
+RUN ARCH="$(dpkg --print-architecture)" \
+    && curl -fsSL "https://gitlab.com/gitlab-org/cli/-/releases/v${GLAB_VERSION}/downloads/glab_${GLAB_VERSION}_linux_${ARCH}.deb" \
+       -o /tmp/glab.deb \
+    && dpkg -i /tmp/glab.deb \
+    && rm /tmp/glab.deb
+
 # Install Python 3 + dev tooling into an isolated venv
 # - python3-venv provides the venv module (not always bundled in minimal images)
 # - /opt/pyenv is owned by clide so the agent can pip-install workspace project
