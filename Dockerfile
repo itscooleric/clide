@@ -77,6 +77,9 @@ COPY claude-entrypoint.sh /usr/local/bin/claude-entrypoint.sh
 COPY firewall.sh /usr/local/bin/firewall.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/claude-entrypoint.sh /usr/local/bin/firewall.sh
 
+# Default CLAUDE.md template — seeded into /workspace on first run if none exists
+COPY CLAUDE.md.template /usr/local/share/clide/CLAUDE.md.template
+
 # tmux config — mouse support, sane splits, 256-colour
 COPY --chown=clide:clide .tmux.conf /home/clide/.tmux.conf
 
