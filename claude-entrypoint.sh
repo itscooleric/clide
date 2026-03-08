@@ -19,7 +19,12 @@ fi
 # everything lives alongside the project (no Docker named volumes needed).
 CLIDE_DIR="/workspace/.clide"
 mkdir -p "$CLIDE_DIR"
-chown clide:clide "$CLIDE_DIR"
+chown clide:clide "$CLIDE_DIR" 2>/dev/null || {
+  # chown may fail on bind mounts without CHOWN capability or on filesystems
+  # that don't support ownership changes (NFS, FUSE, etc.).  Fall back to
+  # world-writable so the clide user can still read/write the directory.
+  chmod 777 "$CLIDE_DIR" 2>/dev/null || echo "warning: cannot set permissions on $CLIDE_DIR" >&2
+}
 
 # Symlink ~/.claude → /workspace/.clide so Claude Code reads/writes into the
 # workspace-local directory.  Remove any stale file/dir first (e.g. from a
@@ -38,7 +43,7 @@ elif [[ -d "$HOME_DIR/.claude" ]]; then
 else
   ln -s "$CLIDE_DIR" "$HOME_DIR/.claude"
 fi
-chown -h clide:clide "$HOME_DIR/.claude"
+chown -h clide:clide "$HOME_DIR/.claude" 2>/dev/null || true
 
 # Seed CLAUDE.md into the workspace if a template exists and no CLAUDE.md is present.
 # This gives every session a baseline set of instructions without overwriting user edits.
@@ -53,7 +58,7 @@ if [[ ! -f "$CLAUDE_MD" ]]; then
   fi
   if [[ -n "$TEMPLATE" ]]; then
     cp "$TEMPLATE" "$CLAUDE_MD"
-    chown clide:clide "$CLAUDE_MD"
+    chown clide:clide "$CLAUDE_MD" 2>/dev/null || true
     echo "claude: seeded CLAUDE.md from ${TEMPLATE}"
   fi
 fi
