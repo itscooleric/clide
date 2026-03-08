@@ -35,6 +35,19 @@ else
   echo "ttyd: WARNING - GitHub CLI not authenticated (GH_TOKEN not set?); skipping gh auth setup-git"
 fi
 
+# Wire glab auth for GitLab CLI — best-effort, missing token doesn't block startup.
+if [[ -n "${GITLAB_TOKEN:-}" && -n "${GITLAB_HOST:-}" ]]; then
+  gosu clide glab config set token "${GITLAB_TOKEN}" --host "${GITLAB_HOST}" 2>/dev/null \
+    && echo "ttyd: glab authenticated for ${GITLAB_HOST}" \
+    || echo "ttyd: WARNING - glab config failed; continuing without GitLab auth"
+elif [[ -n "${GITLAB_TOKEN:-}" ]]; then
+  gosu clide glab config set token "${GITLAB_TOKEN}" --host "gitlab.com" 2>/dev/null \
+    && echo "ttyd: glab authenticated for gitlab.com" \
+    || echo "ttyd: WARNING - glab config failed; continuing without GitLab auth"
+else
+  echo "ttyd: glab not configured (GITLAB_TOKEN not set — set in .env to enable)"
+fi
+
 # Auth precedence: credentials take priority; TTYD_NO_AUTH=true is the explicit opt-out.
 # Setting both TTYD_NO_AUTH=true and credentials is a configuration error.
 if [[ "${TTYD_NO_AUTH:-}" == "true" && -n "${TTYD_USER:-}" && -n "${TTYD_PASS:-}" ]]; then
