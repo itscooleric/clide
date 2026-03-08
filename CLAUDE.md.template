@@ -1,0 +1,18 @@
+# Project Instructions
+
+You are working inside a clide container — a sandboxed development environment
+with Claude Code, GitHub Copilot, GitHub CLI, and Codex pre-installed.
+
+## Environment
+
+- Workspace is mounted at `/workspace`
+- You are running as user `clide` (uid 1001)
+- Egress is restricted to an allowlist (see firewall.sh)
+- Python venv is at `/opt/pyenv` (pytest and ruff pre-installed)
+- Session memory persists across container restarts in `~/.claude/`
+
+## Conventions
+
+- Write clear, concise commit messages
+- Run tests before committing when a test suite exists
+- Prefer editing existing files over creating new ones

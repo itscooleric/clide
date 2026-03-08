@@ -30,11 +30,16 @@ echo "firewall: configuring egress allowlist..."
 
 # ── Baseline allowed hosts ────────────────────────────────────────────────────
 BASELINE_HOSTS=(
-  "api.anthropic.com"       # Claude Code
-  "api.githubcopilot.com"   # GitHub Copilot CLI
-  "api.github.com"          # GitHub Copilot CLI + GitHub CLI
-  "github.com"              # GitHub CLI
-  "registry.npmjs.org"      # npm package updates (optional)
+  "api.anthropic.com"            # Claude Code
+  "api.githubcopilot.com"        # GitHub Copilot CLI
+  "api.github.com"               # GitHub Copilot CLI + GitHub CLI
+  "github.com"                   # GitHub CLI + git over HTTPS
+  "objects.githubusercontent.com" # git pack objects (clone/fetch/pull)
+  "raw.githubusercontent.com"    # raw file access
+  "uploads.github.com"           # gh push / release uploads
+  "registry.npmjs.org"           # npm package updates (optional)
+  "api.openai.com"               # Codex CLI (OpenAI)
+  "auth.openai.com"              # Codex CLI — device code auth flow
 )
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -95,7 +100,9 @@ if [[ -n "${CLIDE_ALLOWED_HOSTS:-}" ]]; then
   done <<< "$normalized"
 fi
 
-# 6. Reject all other outbound traffic (REJECT gives immediate feedback vs DROP's timeout)
+# 6. Log then reject all other outbound traffic
+_ipt -A OUTPUT -m limit --limit 10/min --limit-burst 5 -j LOG --log-prefix "CLIDE-REJECT: " --log-level 4
+_ip6 -A OUTPUT -m limit --limit 10/min --limit-burst 5 -j LOG --log-prefix "CLIDE-REJECT: " --log-level 4
 _ipt -A OUTPUT -j REJECT --reject-with icmp-port-unreachable
 _ip6 -A OUTPUT -j REJECT
 

@@ -1,4 +1,4 @@
-.PHONY: build rebuild web web-stop shell copilot gh claude help
+.PHONY: build rebuild web web-stop shell copilot gh claude codex help
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -30,6 +30,9 @@ gh: ## Run GitHub CLI
 
 claude: ## Run Claude Code CLI
 	CLAUDE_CODE_SIMPLE=1 docker compose run --rm claude
+
+codex: ## Run Codex CLI (OpenAI)
+	docker compose run --rm codex
 
 logs: ## Show web terminal logs
 	docker compose logs -f web
