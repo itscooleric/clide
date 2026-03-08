@@ -47,6 +47,14 @@ RUN npm install -g @anthropic-ai/claude-code
 # hadolint ignore=DL3016,DL3059
 RUN npm install -g @openai/codex
 
+# Install glab (GitLab CLI) — pinned version, single binary
+ARG GLAB_VERSION=1.47.0
+RUN ARCH="$(dpkg --print-architecture)" \
+    && curl -fsSL "https://gitlab.com/gitlab-org/cli/-/releases/v${GLAB_VERSION}/downloads/glab_${GLAB_VERSION}_linux_${ARCH}.deb" \
+       -o /tmp/glab.deb \
+    && dpkg -i /tmp/glab.deb \
+    && rm /tmp/glab.deb
+
 # Install Python 3 + dev tooling into an isolated venv
 # - python3-venv provides the venv module (not always bundled in minimal images)
 # - /opt/pyenv is owned by clide so the agent can pip-install workspace project
@@ -65,7 +73,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV PATH="/opt/pyenv/bin:${PATH}"
 
 # Create unprivileged user and set up workspace
-RUN useradd -m -s /bin/bash -u 1001 clide \
+# UID/GID default to 1000 (standard first non-root user on Linux/macOS).
+# Override at build time:  CLIDE_UID=$(id -u) CLIDE_GID=$(id -g) docker compose build
+ARG CLIDE_UID=1000
+ARG CLIDE_GID=1000
+RUN groupadd -g "${CLIDE_GID}" clide \
+    && useradd -m -l -s /bin/bash -u "${CLIDE_UID}" -g clide clide \
     && mkdir -p /workspace \
     && chown clide:clide /workspace \
     # Hand venv ownership to clide so pip install works without sudo

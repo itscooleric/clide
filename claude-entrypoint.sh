@@ -15,26 +15,53 @@ if [[ "${CLIDE_FIREWALL_DONE:-0}" != "1" ]]; then
   export CLIDE_FIREWALL_DONE=1
 fi
 
+# Persistent data directory — stored inside the workspace bind mount so
+# everything lives alongside the project (no Docker named volumes needed).
+CLIDE_DIR="/workspace/.clide"
+mkdir -p "$CLIDE_DIR"
+chown clide:clide "$CLIDE_DIR" 2>/dev/null || {
+  # chown may fail on bind mounts without CHOWN capability or on filesystems
+  # that don't support ownership changes (NFS, FUSE, etc.).  Fall back to
+  # world-writable so the clide user can still read/write the directory.
+  chmod 777 "$CLIDE_DIR" 2>/dev/null || echo "warning: cannot set permissions on $CLIDE_DIR" >&2
+}
+
+# Symlink ~/.claude → /workspace/.clide so Claude Code reads/writes into the
+# workspace-local directory.  Remove any stale file/dir first (e.g. from a
+# previous named-volume mount).
+if [[ -L "$HOME_DIR/.claude" ]]; then
+  # Already a symlink — verify target
+  if [[ "$(readlink "$HOME_DIR/.claude")" != "$CLIDE_DIR" ]]; then
+    rm -f "$HOME_DIR/.claude"
+    ln -s "$CLIDE_DIR" "$HOME_DIR/.claude"
+  fi
+elif [[ -d "$HOME_DIR/.claude" ]]; then
+  # Migrate existing data from old named-volume mount into workspace
+  cp -a "$HOME_DIR/.claude/." "$CLIDE_DIR/" 2>/dev/null || true
+  rm -rf "$HOME_DIR/.claude"
+  ln -s "$CLIDE_DIR" "$HOME_DIR/.claude"
+else
+  ln -s "$CLIDE_DIR" "$HOME_DIR/.claude"
+fi
+chown -h clide:clide "$HOME_DIR/.claude" 2>/dev/null || true
+
 # Seed CLAUDE.md into the workspace if a template exists and no CLAUDE.md is present.
 # This gives every session a baseline set of instructions without overwriting user edits.
-# Template search order: /workspace/.claude/CLAUDE.md.template, then bundled default.
+# Template search order: /workspace/.clide/CLAUDE.md.template, then bundled default.
 CLAUDE_MD="/workspace/CLAUDE.md"
 if [[ ! -f "$CLAUDE_MD" ]]; then
   TEMPLATE=""
-  if [[ -f "/workspace/.claude/CLAUDE.md.template" ]]; then
-    TEMPLATE="/workspace/.claude/CLAUDE.md.template"
+  if [[ -f "/workspace/.clide/CLAUDE.md.template" ]]; then
+    TEMPLATE="/workspace/.clide/CLAUDE.md.template"
   elif [[ -f "/usr/local/share/clide/CLAUDE.md.template" ]]; then
     TEMPLATE="/usr/local/share/clide/CLAUDE.md.template"
   fi
   if [[ -n "$TEMPLATE" ]]; then
     cp "$TEMPLATE" "$CLAUDE_MD"
-    chown clide:clide "$CLAUDE_MD"
+    chown clide:clide "$CLAUDE_MD" 2>/dev/null || true
     echo "claude: seeded CLAUDE.md from ${TEMPLATE}"
   fi
 fi
-
-# Ensure the persistent volume directory is owned by clide (first-run fix for named volumes)
-chown -R clide:clide "$HOME_DIR/.claude" 2>/dev/null || true
 
 gosu clide node <<'NODE'
 const fs = require('fs');
@@ -94,6 +121,17 @@ if [[ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" && -n "${ANTHROPIC_API_KEY:-}" ]]; then
   unset ANTHROPIC_API_KEY
 elif [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
   unset ANTHROPIC_API_KEY
+fi
+
+# Wire glab auth — best-effort, missing token doesn't block startup.
+if [[ -n "${GITLAB_TOKEN:-}" && -n "${GITLAB_HOST:-}" ]]; then
+  gosu clide glab config set token "${GITLAB_TOKEN}" --host "${GITLAB_HOST}" 2>/dev/null \
+    && echo "claude: glab authenticated for ${GITLAB_HOST}" \
+    || echo "claude: WARNING - glab config failed; continuing without GitLab auth"
+elif [[ -n "${GITLAB_TOKEN:-}" ]]; then
+  gosu clide glab config set token "${GITLAB_TOKEN}" --host "gitlab.com" 2>/dev/null \
+    && echo "claude: glab authenticated for gitlab.com" \
+    || echo "claude: WARNING - glab config failed; continuing without GitLab auth"
 fi
 
 # Opt-in tmux wrapping for shell service (set CLIDE_TMUX=1 in .env)

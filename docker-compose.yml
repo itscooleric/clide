@@ -1,5 +1,9 @@
 x-base: &base
-  build: .
+  build:
+    context: .
+    args:
+      CLIDE_UID: ${CLIDE_UID:-1000}
+      CLIDE_GID: ${CLIDE_GID:-1000}
   image: clide
   env_file: .env
   environment:
@@ -7,14 +11,23 @@ x-base: &base
     CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
     CLIDE_TMUX: ${CLIDE_TMUX:-}
     OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-  # Drop all capabilities then re-add only what the firewall needs.
-  # NET_ADMIN is required for iptables egress rules; set CLIDE_FIREWALL=0 to disable.
+    GITLAB_TOKEN: ${GITLAB_TOKEN:-}
+    GITLAB_HOST: ${GITLAB_HOST:-}
+  # Drop all capabilities then re-add only what entrypoint + firewall need.
+  # NET_ADMIN  — iptables egress rules (set CLIDE_FIREWALL=0 to disable)
+  # SETUID/GID — gosu privilege drop from root → clide
+  # CHOWN/FOWNER — ownership fixup on bind-mounted workspace
+  # DAC_OVERRIDE — lets root bypass host-UID permission checks on bind mounts
+  #                (required for mkdir /workspace/.clide during setup)
   cap_drop:
     - ALL
   cap_add:
     - NET_ADMIN
     - SETUID
     - SETGID
+    - CHOWN
+    - FOWNER
+    - DAC_OVERRIDE
   # Prevent processes from gaining new privileges via setuid/setgid binaries.
   security_opt:
     - no-new-privileges:true
@@ -24,7 +37,6 @@ x-base: &base
   pids_limit: 512
   volumes:
     - ${PROJECT_DIR:-..}:/workspace
-    - claude-data:/home/clide/.claude
   stdin_open: true
   tty: true
 
@@ -77,7 +89,6 @@ services:
     entrypoint: ["/usr/local/bin/firewall.sh"]
     command: ["codex"]
 
-# Named volumes — persist state across container restarts.
-# claude-data: Claude Code session memory, settings, and project learnings (~/.claude)
-volumes:
-  claude-data:
+# Persistent state is stored in /workspace/.clide/ (within the bind-mounted
+# project directory) — no named volumes needed. This avoids Docker's
+# root-owned volume permission issues and keeps all clide data in one place.

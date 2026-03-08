@@ -1,6 +1,6 @@
 # clide
 
-```
+```text
 
    ██████ ██      ██ ██████  ███████
   ██      ██      ██ ██   ██ ██
@@ -58,6 +58,7 @@ Dockerized CLI toolkit — [Claude Code](https://www.anthropic.com/claude/code),
 | GitHub CLI | `gh` | `GH_TOKEN` |
 | Claude Code | `claude` | `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` |
 | Codex CLI (OpenAI) | `codex` | `OPENAI_API_KEY` (or device code flow) |
+| GitLab CLI | `glab` | `GITLAB_TOKEN` + `GITLAB_HOST` |
 
 ### Claude Code authentication
 
