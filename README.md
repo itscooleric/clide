@@ -22,6 +22,7 @@ graph TB
             claude["claude\nClaude Code CLI"]
             copilot["copilot\nGitHub Copilot CLI"]
             gh["gh\nGitHub CLI"]
+            codex["codex\nCodex CLI"]
         end
     end
 
@@ -309,17 +310,29 @@ The firewall uses `iptables` and requires the `NET_ADMIN` capability, which is a
 
 ## Python dev tooling
 
-The container includes a Python 3 virtual environment at `/opt/pyenv` with the following tools pre-installed and on `PATH`:
+The container includes a Python 3 **virtualenv** at `/opt/pyenv` (note: this is a plain `python3 -m venv`, not the pyenv version manager) with the following tools pre-installed and on `PATH`:
 
 | Tool | Purpose |
 |------|---------|
 | `pytest` | Test runner — `pytest tests/` |
 | `ruff` | Linter + formatter — `ruff check .` / `ruff format .` |
 
-To install project dependencies inside the container:
+The venv is **clide-owned** — `pip install` works without `sudo` or a container rebuild. To install workspace project dependencies:
 
 ```bash
-pip install -r requirements.txt
+pip install -r /workspace/<repo>/requirements.txt
 ```
 
 The venv is at `/opt/pyenv`; `pip`, `pytest`, and `ruff` are all directly callable without activation.
+
+> **Note:** `pip install` requires outbound access to PyPI. Add these to `CLIDE_ALLOWED_HOSTS` if the egress firewall is enabled:
+> ```env
+> CLIDE_ALLOWED_HOSTS=pypi.org,files.pythonhosted.org
+> ```
+
+## Git workspace repos
+
+`safe.directory = *` is pre-configured in the clide user's gitconfig at image build time. Volume-mounted repos cloned from GitHub are often owned by the host UID rather than `clide:1000`, which normally causes git to refuse to operate with a "detected dubious ownership" error. This is eliminated entirely — `git status`, `git log`, and all other git operations work from the first prompt without any `git config` boilerplate.
+
+> **Security note:** `safe.directory = *` trusts all directories unconditionally. This is appropriate for a single-user dev sandbox where you control what gets mounted, but it means git will operate in any directory regardless of ownership. If you share the container or mount untrusted paths, consider replacing `*` with the specific paths you use (e.g. `/workspace`).
+

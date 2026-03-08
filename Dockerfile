@@ -49,7 +49,9 @@ RUN npm install -g @openai/codex
 
 # Install Python 3 + dev tooling into an isolated venv
 # - python3-venv provides the venv module (not always bundled in minimal images)
-# - /opt/pyenv is world-readable so the unprivileged clide user can run tools
+# - /opt/pyenv is owned by clide so the agent can pip-install workspace project
+#   dependencies on demand (e.g. pip install -r /workspace/clem/requirements.txt)
+#   without a container rebuild. pytest + ruff are pre-installed as a baseline.
 # hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
@@ -65,7 +67,9 @@ ENV PATH="/opt/pyenv/bin:${PATH}"
 # Create unprivileged user and set up workspace
 RUN useradd -m -s /bin/bash -u 1001 clide \
     && mkdir -p /workspace \
-    && chown clide:clide /workspace
+    && chown clide:clide /workspace \
+    # Hand venv ownership to clide so pip install works without sudo
+    && chown -R clide:clide /opt/pyenv
 
 # Add entrypoint scripts
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
@@ -78,6 +82,15 @@ COPY --chown=clide:clide .tmux.conf /home/clide/.tmux.conf
 
 # Switch to unprivileged user for user-scoped installs
 USER clide
+
+# Trust all directories for git operations.
+# Clide is a single-user dev sandbox — volume-mounted repos from the host
+# are often owned by a different UID (host user vs clide:1000), which causes
+# git to refuse to operate and wastes tokens on `git config --global
+# --add safe.directory ...` at the start of every session.
+# Set safe.directory=* once at image build time to eliminate this entirely.
+# See: https://git-scm.com/docs/git-config#Documentation/git-config.txt-safedirectory
+RUN git config --global --add safe.directory '*'
 
 # Install GitHub Copilot CLI (unpinned — tracks gh extension updates)
 RUN curl -fsSL https://gh.io/copilot-install | bash
