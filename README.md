@@ -4,41 +4,42 @@ Dockerized CLI toolkit with [GitHub Copilot CLI](https://github.com/github/copil
 
 ## Architecture
 
-```mermaid
-graph TB
-    subgraph Host["Host Machine"]
-        workspace["📁 Project Directory\n(mounted as /workspace)"]
-        env[".env\n(secrets — gitignored)"]
-        browser["🌐 Browser\nlocalhost:7681"]
-    end
-
-    subgraph Container["clide Container (non-root: clide uid=1000)"]
-        direction TB
-        firewall["🔥 firewall.sh\n(iptables egress allowlist)"]
-
-        subgraph Services["Services"]
-            web["web\n(ttyd → tmux)"]
-            shell["shell\n(bash)"]
-            claude["claude\nClaude Code CLI"]
-            copilot["copilot\nGitHub Copilot CLI"]
-            gh["gh\nGitHub CLI"]
-            codex["codex\nCodex CLI"]
-        end
-    end
-
-    subgraph Internet["Internet (allowlisted endpoints only)"]
-        anthropic["api.anthropic.com\nClaude Code"]
-        ghcopilot["api.githubcopilot.com\nGitHub Copilot"]
-        github["api.github.com\ngithub.com\nGitHub CLI"]
-        npm["registry.npmjs.org\nnpm"]
-    end
-
-    browser -->|"HTTP (ttyd)"| web
-    workspace -->|"bind mount"| Container
-    env -->|"env vars"| Container
-    firewall --> Services
-    Services -->|"blocked by default"| firewall
-    firewall -->|"allowlisted"| Internet
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Host Machine                                               │
+│                                                             │
+│  📁 Project Dir ──bind mount──┐                             │
+│  .env (secrets) ──env vars───┐│                             │
+│  🌐 Browser :7681 ──HTTP────┐││                             │
+│                              │││                             │
+│  ┌───────────────────────────┼┼┼───────────────────────────┐│
+│  │  clide Container          │││  (non-root: clide uid=1000)│
+│  │                           │││                            ││
+│  │  🔥 firewall.sh ──────── │┼┼──── iptables egress       ││
+│  │       │                   │││     allowlist              ││
+│  │       ▼                   ▼▼▼                            ││
+│  │  ┌─────────────────────────────────────────────┐        ││
+│  │  │  Services                                   │        ││
+│  │  │  web (ttyd→tmux)  shell (bash)              │        ││
+│  │  │  claude    copilot    gh    codex            │        ││
+│  │  └──────────────────────┬──────────────────────┘        ││
+│  │                         │ blocked by default             ││
+│  │                    firewall                              ││
+│  │                         │ allowlisted only               ││
+│  └─────────────────────────┼────────────────────────────────┘│
+│                            │                                 │
+└────────────────────────────┼─────────────────────────────────┘
+                             │
+                             ▼
+        ┌────────────────────────────────────────┐
+        │  Internet (allowlisted endpoints only) │
+        │                                        │
+        │  api.anthropic.com     Claude Code     │
+        │  api.githubcopilot.com GitHub Copilot  │
+        │  api.github.com        GitHub CLI      │
+        │  registry.npmjs.org    npm             │
+        │  api.openai.com        Codex CLI       │
+        └────────────────────────────────────────┘
 ```
 
 > **Trust boundary:** the host trusts the container with a read-write mount of your project directory and your API credentials via `.env`. The container cannot reach the internet beyond the allowlisted endpoints (when `NET_ADMIN` is available). See [`SECURITY.md`](./SECURITY.md) for the full threat model.
