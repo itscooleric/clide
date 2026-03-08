@@ -5,3 +5,4 @@ MD031: false  # blanks-around-fences: style preference
 MD032: false  # blanks-around-lists: style preference
 MD033: false  # no-inline-html: used intentionally in some docs
 MD034: false  # no-bare-urls: URLs in technical docs are self-explanatory
+MD060: false  # table-column-style: compact tables are readable enough
