@@ -24,6 +24,7 @@ x-base: &base
   pids_limit: 512
   volumes:
     - ${PROJECT_DIR:-..}:/workspace
+    - claude-data:/home/clide/.claude
   stdin_open: true
   tty: true
 
@@ -75,3 +76,8 @@ services:
     <<: *base
     entrypoint: ["/usr/local/bin/firewall.sh"]
     command: ["codex"]
+
+# Named volumes — persist state across container restarts.
+# claude-data: Claude Code session memory, settings, and project learnings (~/.claude)
+volumes:
+  claude-data:
