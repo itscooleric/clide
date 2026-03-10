@@ -39,10 +39,6 @@ RUN ARCH="$(uname -m)" \
        -o /usr/local/bin/ttyd \
     && chmod +x /usr/local/bin/ttyd
 
-# Install Claude Code CLI (pinned — bump ARG to upgrade)
-ARG CLAUDE_CODE_VERSION=2.1.71
-RUN npm install -g "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}"
-
 # Install Codex CLI (pinned — bump ARG to upgrade)
 # hadolint ignore=DL3059
 ARG CODEX_VERSION=0.112.0
@@ -71,14 +67,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
        pytest==9.0.2 \
        ruff==0.15.5
 
-ENV PATH="/opt/pyenv/bin:${PATH}"
+ENV PATH="/home/clide/.local/bin:/opt/pyenv/bin:${PATH}"
 
 # Create unprivileged user and set up workspace
 # UID/GID default to 1000 (standard first non-root user on Linux/macOS).
 # Override at build time:  CLIDE_UID=$(id -u) CLIDE_GID=$(id -g) docker compose build
 ARG CLIDE_UID=1000
 ARG CLIDE_GID=1000
-RUN groupadd -g "${CLIDE_GID}" clide \
+RUN groupadd -g "${CLIDE_GID}" clide 2>/dev/null || groupmod -n clide "$(getent group "${CLIDE_GID}" | cut -d: -f1)" \
     && useradd -m -l -s /bin/bash -u "${CLIDE_UID}" -g clide clide \
     && mkdir -p /workspace \
     && chown clide:clide /workspace \
@@ -99,6 +95,10 @@ COPY --chown=clide:clide .tmux.conf /home/clide/.tmux.conf
 
 # Switch to unprivileged user for user-scoped installs
 USER clide
+
+# Install Claude Code CLI via native installer (self-updating, no npm dependency).
+# Installs to ~/.local/bin/claude — auto-updates at runtime without sudo.
+RUN curl -fsSL https://claude.ai/install.sh | sh
 
 # Trust all directories for git operations.
 # Clide is a single-user dev sandbox — volume-mounted repos from the host
