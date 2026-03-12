@@ -65,14 +65,6 @@ services:
       caddy: ${CADDY_HOSTNAME:-clide.lan.wubi.sh}
       caddy.tls: ${CADDY_TLS:-internal}
       caddy.reverse_proxy: "{{upstreams 7681}}"
-      # Caddy basic auth (recommended when using Caddy — keeps password out of ttyd argv).
-      # To enable:
-      #   1. Generate hash: docker run --rm caddy caddy hash-password --plaintext 'yourpass'
-      #   2. Set in .env:
-      #        CADDY_BASICAUTH_USER=youruser
-      #        CADDY_BASICAUTH_HASH=$2a$14$...
-      #        TTYD_NO_AUTH=true
-      # Labels are set via docker-compose.override.yml — see docs/auth.md
 
   # Interactive shell — all three CLIs available (claude config pre-seeded)
   shell:
