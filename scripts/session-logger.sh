@@ -178,6 +178,15 @@ emit_event "session_start" \
 
 echo "[session-logger] Session ${SESSION_ID} started (agent=${AGENT}, logs=${SESSION_DIR})"
 
+# Start notification watcher in background (if ntfy is configured)
+NOTIFY_PID=""
+NOTIFY_SCRIPT="$(command -v notify.sh 2>/dev/null || echo "$(dirname "$0")/notify.sh")"
+if [[ -x "$NOTIFY_SCRIPT" && -n "${CLIDE_NTFY_URL:-}" && "${CLIDE_NTFY_DISABLED:-}" != "1" ]]; then
+  "$NOTIFY_SCRIPT" "${TRANSCRIPT_FILE}" "${SESSION_ID}" "${AGENT}" &
+  NOTIFY_PID=$!
+  echo "[session-logger] Notifications enabled (ntfy topic: ${CLIDE_NTFY_TOPIC:-clide})"
+fi
+
 # Run the agent inside `script` for transcript capture
 # -q: quiet (no "Script started" banner)
 # -f: flush after each write
@@ -188,6 +197,12 @@ if command -v script >/dev/null 2>&1; then
 else
   # Fallback: no transcript, just run directly
   "$@" || EXIT_CODE=$?
+fi
+
+# Stop notification watcher
+if [[ -n "${NOTIFY_PID}" ]]; then
+  kill "$NOTIFY_PID" 2>/dev/null || true
+  wait "$NOTIFY_PID" 2>/dev/null || true
 fi
 
 # Compress transcript
