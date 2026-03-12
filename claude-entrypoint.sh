@@ -137,8 +137,16 @@ fi
 # Opt-in tmux wrapping for shell service (set CLIDE_TMUX=1 in .env)
 # Web terminal always uses tmux via entrypoint.sh; this covers make shell / ./clide shell.
 # Drop privileges to clide via gosu before exec so the workload never runs as root.
-if [[ -n "${CLIDE_TMUX:-}" ]]; then
-  exec gosu clide tmux new-session -A -s main "${@:-claude}"
+
+# Wrap agent CLIs with session logger for structured logging + transcript capture.
+# Set CLIDE_LOG_DISABLED=1 to skip. Logger is agent-agnostic — works with claude, codex, etc.
+AGENT_CMD="${*:-claude}"
+if [[ -x /usr/local/bin/session-logger.sh && "${CLIDE_LOG_DISABLED:-}" != "1" ]]; then
+  AGENT_CMD="session-logger.sh ${AGENT_CMD}"
 fi
 
-exec gosu clide "${@:-claude}"
+if [[ -n "${CLIDE_TMUX:-}" ]]; then
+  exec gosu clide tmux new-session -A -s main ${AGENT_CMD}
+fi
+
+exec gosu clide ${AGENT_CMD}

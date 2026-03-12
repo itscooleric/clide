@@ -13,6 +13,9 @@ x-base: &base
     OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     GITLAB_TOKEN: ${GITLAB_TOKEN:-}
     GITLAB_HOST: ${GITLAB_HOST:-}
+    # Session logging (v4: Agent Observability)
+    CLIDE_LOG_DISABLED: ${CLIDE_LOG_DISABLED:-}
+    CLIDE_MAX_SESSIONS: ${CLIDE_MAX_SESSIONS:-30}
   # Drop all capabilities then re-add only what entrypoint + firewall need.
   # NET_ADMIN  — iptables egress rules (set CLIDE_FIREWALL=0 to disable)
   # SETUID/GID — gosu privilege drop from root → clide
