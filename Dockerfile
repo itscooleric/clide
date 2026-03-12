@@ -99,7 +99,7 @@ USER clide
 
 # Install Claude Code CLI via native installer (self-updating, no npm dependency).
 # Installs to ~/.local/bin/claude — auto-updates at runtime without sudo.
-RUN curl -fsSL https://claude.ai/install.sh | sh
+RUN curl -fsSL https://claude.ai/install.sh | bash
 
 # Trust all directories for git operations.
 # Clide is a single-user dev sandbox — volume-mounted repos from the host
