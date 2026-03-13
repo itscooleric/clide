@@ -65,11 +65,12 @@ else
 fi
 
 # Drop privileges to clide before starting ttyd so the web terminal never runs as root.
-# Filter ttyd output to scrub credentials from logs (ttyd prints --credential in its
-# startup banner, which would leak the password into `docker logs`).
+# Filter ttyd output to scrub credentials from logs — ttyd prints the credential both
+# as plaintext and base64-encoded in its startup banner.
 if [[ -n "${TTYD_PASS:-}" ]]; then
+  CRED_B64=$(echo -n "${TTYD_USER:-}:${TTYD_PASS}" | base64)
   exec gosu clide ttyd "${TTYD_ARGS[@]}" tmux new-session -A -s main 2>&1 \
-    | sed -u "s|${TTYD_PASS}|[REDACTED]|g"
+    | sed -u -e "s|${TTYD_PASS}|[REDACTED]|g" -e "s|${CRED_B64}|[REDACTED]|g"
 else
   exec gosu clide ttyd "${TTYD_ARGS[@]}" tmux new-session -A -s main
 fi
