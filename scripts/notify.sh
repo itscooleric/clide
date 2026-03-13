@@ -34,21 +34,21 @@ ENDPOINT="${NTFY_URL}/${NTFY_TOPIC}"
 case "$EVENT" in
   start)
     curl -sf -X POST "$ENDPOINT" \
-      -H "Title: 🚀 ${AGENT}: Session started" \
-      -H "Tags: rocket,robot" \
+      -H "Title: ${AGENT}: Session started" \
+      -H "Tags: robot" \
       -d "${SESSION_ID}" \
       >/dev/null 2>&1 || true
     ;;
   end)
     curl -sf -X POST "$ENDPOINT" \
-      -H "Title: ✅ ${AGENT}: Session ended" \
-      -H "Tags: white_check_mark,robot" \
+      -H "Title: ${AGENT}: Session ended" \
+      -H "Tags: robot" \
       -d "${SESSION_ID} — ${DETAIL:-exit 0}" \
       >/dev/null 2>&1 || true
     ;;
   error)
     curl -sf -X POST "$ENDPOINT" \
-      -H "Title: ❌ ${AGENT}: Error" \
+      -H "Title: ${AGENT}: Error" \
       -H "Priority: high" \
       -H "Tags: warning,robot" \
       -d "${SESSION_ID} — ${DETAIL:-unknown error}" \
