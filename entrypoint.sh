@@ -1,6 +1,18 @@
 #!/bin/bash
 set -e
 
+# Install LAN CA certificate at runtime (e.g. Caddy internal TLS root).
+# Set CLIDE_CA_URL in .env to the URL of your CA cert. Uses -k for the
+# initial fetch since the cert isn't trusted yet. Graceful — never blocks startup.
+if [[ -n "${CLIDE_CA_URL:-}" ]]; then
+  if curl -fsSLk "${CLIDE_CA_URL}" -o /usr/local/share/ca-certificates/lan-ca.crt 2>/dev/null \
+     && update-ca-certificates 2>/dev/null; then
+    echo "clide: installed CA cert from ${CLIDE_CA_URL}"
+  else
+    echo "clide: WARNING - failed to install CA cert from ${CLIDE_CA_URL}; continuing without it"
+  fi
+fi
+
 # Pre-seed Claude config (auth, onboarding flags) — same as claude-entrypoint.sh
 # This ensures CLAUDE_CODE_OAUTH_TOKEN / ANTHROPIC_API_KEY from .env are wired up
 # before any shell session in the web terminal runs `claude`.

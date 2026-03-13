@@ -5,6 +5,17 @@ set -euo pipefail
 HOME_DIR="/home/clide"
 export HOME="$HOME_DIR"
 
+# Install LAN CA certificate at runtime if not already done (entrypoint.sh may have
+# already handled this for the web service). Graceful — never blocks startup.
+if [[ -n "${CLIDE_CA_URL:-}" && ! -f /usr/local/share/ca-certificates/lan-ca.crt ]]; then
+  if curl -fsSLk "${CLIDE_CA_URL}" -o /usr/local/share/ca-certificates/lan-ca.crt 2>/dev/null \
+     && update-ca-certificates 2>/dev/null; then
+    echo "clide: installed CA cert from ${CLIDE_CA_URL}"
+  else
+    echo "clide: WARNING - failed to install CA cert from ${CLIDE_CA_URL}; continuing without it"
+  fi
+fi
+
 # Set up egress firewall (CLIDE_FIREWALL=0 to disable; CLIDE_ALLOWED_HOSTS to extend)
 # Skip if a parent entrypoint already ran it for this container.
 if [[ "${CLIDE_FIREWALL_DONE:-0}" != "1" ]]; then
