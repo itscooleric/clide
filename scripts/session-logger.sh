@@ -178,13 +178,10 @@ emit_event "session_start" \
 
 echo "[session-logger] Session ${SESSION_ID} started (agent=${AGENT}, logs=${SESSION_DIR})"
 
-# Start notification watcher in background (if ntfy is configured)
-NOTIFY_PID=""
+# Send start notification
 NOTIFY_SCRIPT="$(command -v notify.sh 2>/dev/null || echo "$(dirname "$0")/notify.sh")"
-if [[ -x "$NOTIFY_SCRIPT" && -n "${CLIDE_NTFY_URL:-}" && "${CLIDE_NTFY_DISABLED:-}" != "1" ]]; then
-  "$NOTIFY_SCRIPT" "${TRANSCRIPT_FILE}" "${SESSION_ID}" "${AGENT}" &
-  NOTIFY_PID=$!
-  echo "[session-logger] Notifications enabled (ntfy topic: ${CLIDE_NTFY_TOPIC:-clide})"
+if [[ -x "$NOTIFY_SCRIPT" ]]; then
+  "$NOTIFY_SCRIPT" start "${SESSION_ID}" "${AGENT}" &
 fi
 
 # Run the agent inside `script` for transcript capture
@@ -199,12 +196,6 @@ else
   "$@" || EXIT_CODE=$?
 fi
 
-# Stop notification watcher
-if [[ -n "${NOTIFY_PID}" ]]; then
-  kill "$NOTIFY_PID" 2>/dev/null || true
-  wait "$NOTIFY_PID" 2>/dev/null || true
-fi
-
 # Compress transcript
 if [[ -f "${TRANSCRIPT_FILE}" && -s "${TRANSCRIPT_FILE}" ]]; then
   gzip -f "${TRANSCRIPT_FILE}" 2>/dev/null || true
@@ -215,6 +206,15 @@ emit_event "session_end" \
   "agent=${AGENT}" \
   "exit_code=${EXIT_CODE}" \
   "outcome=$([ $EXIT_CODE -eq 0 ] && echo 'success' || echo 'error')"
+
+# Send end/error notification
+if [[ -x "$NOTIFY_SCRIPT" ]]; then
+  if [[ $EXIT_CODE -eq 0 ]]; then
+    "$NOTIFY_SCRIPT" end "${SESSION_ID}" "${AGENT}" "exit 0" &
+  else
+    "$NOTIFY_SCRIPT" error "${SESSION_ID}" "${AGENT}" "exit ${EXIT_CODE}" &
+  fi
+fi
 
 echo "[session-logger] Session ${SESSION_ID} ended (exit=${EXIT_CODE})"
 
