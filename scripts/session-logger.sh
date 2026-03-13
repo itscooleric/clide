@@ -31,8 +31,8 @@ LOG_DIR="${CLIDE_LOG_DIR:-/workspace/.clide/logs}"
 MAX_SESSIONS="${CLIDE_MAX_SESSIONS:-30}"
 SCHEMA_VERSION=1
 
-# Skip logging entirely if disabled
-if [[ "${CLIDE_LOG_DISABLED:-}" == "1" ]]; then
+# Skip logging entirely if disabled or if command is a no-op (e.g. entrypoint pre-seed)
+if [[ "${CLIDE_LOG_DISABLED:-}" == "1" || "${1:-}" == "true" ]]; then
   exec "$@"
 fi
 
