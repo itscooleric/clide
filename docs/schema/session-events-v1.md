@@ -58,6 +58,12 @@ Blocklist: `GH_TOKEN`, `GITHUB_TOKEN`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`,
 Configurable via `CLIDE_MAX_SESSIONS` (default: 30). Oldest sessions pruned
 on each new session start.
 
+## Notifications
+
+Session start, end, and error events trigger push notifications via ntfy
+when `CLIDE_NTFY_URL` is configured. Notifications are fire-and-forget
+(failures are silent and never block the session).
+
 ## Configuration
 
 | Env var | Default | Description |
@@ -65,3 +71,7 @@ on each new session start.
 | `CLIDE_LOG_DIR` | `/workspace/.clide/logs` | Log root directory |
 | `CLIDE_MAX_SESSIONS` | `30` | Max sessions to retain |
 | `CLIDE_LOG_DISABLED` | _(empty)_ | Set to `1` to disable logging |
+| `CLIDE_NTFY_URL` | _(empty)_ | ntfy server URL |
+| `CLIDE_NTFY_TOPIC` | `clide` | ntfy topic name |
+| `CLIDE_NTFY_DISABLED` | _(empty)_ | Set to `1` to disable notifications |
+| `CLIDE_CA_URL` | _(empty)_ | LAN CA certificate URL (installed at startup) |
