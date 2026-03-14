@@ -8,7 +8,7 @@
   ██      ██      ██ ██   ██ ██
    ██████ ███████ ██ ██████  ███████
 
-  sandboxed agentic terminal        v3
+  sandboxed agentic terminal        v4
   ──────────────────────────────────────
 
   your project ──bind mount──► /workspace
@@ -113,7 +113,7 @@ codex auth login --auth device
 
 ### tmux — multi-pane workflows
 
-`tmux` is installed in the container and enabled by default in the **web terminal**. Every browser tab attaches to the same named session (`main`), so refreshing the page re-attaches rather than spawning a fresh shell.
+`tmux` is installed in the container and enabled by default in the **web terminal**. Every browser tab attaches to the same named session (`main`), so refreshing the page re-attaches rather than spawning a fresh shell. The web terminal auto-reconnects after network drops (3s default, configurable via `TTYD_RECONNECT`).
 
 For `make shell` / `./clide shell`, tmux is **opt-in** to avoid breaking existing workflows:
 ```env
@@ -130,6 +130,7 @@ CLIDE_TMUX=1
 | `Ctrl-b <arrow>` | Move between panes |
 | `Ctrl-b d` | Detach (session stays alive) |
 | `Ctrl-b r` | Reload tmux config |
+| `F12` | Toggle mouse mode on/off (useful for mobile) |
 | Mouse | Click to focus, scroll to scroll, drag to resize |
 
 ## Setup
@@ -206,6 +207,52 @@ Your project is mounted at `/workspace` inside the container.
 ### Bernard/Forge deployment
 See [`DEPLOY.md`](./DEPLOY.md) for Caddy Docker Proxy integration. Uses `docker-compose.override.yml` (gitignored) for reverse proxy config that persists across git pulls.
 
+## Session logging
+
+Every agent session is automatically logged with structured events and a raw terminal transcript. Typing `claude`, `codex`, or `copilot` in any shell goes through `session-logger.sh` automatically.
+
+```text
+/workspace/.clide/logs/<session_id>/
+  events.jsonl        — structured JSONL events (start, end, errors)
+  transcript.txt.gz   — compressed raw terminal I/O
+```
+
+All logged output is scrubbed for secrets (API keys, tokens, passwords) before writing. See [`docs/schema/session-events-v1.md`](./docs/schema/session-events-v1.md) for the event format.
+
+| Env var | Default | Description |
+|---------|---------|-------------|
+| `CLIDE_LOG_DISABLED` | _(empty)_ | Set to `1` to disable logging |
+| `CLIDE_MAX_SESSIONS` | `30` | Max sessions retained (oldest pruned on new session) |
+
+## Push notifications (ntfy)
+
+Get notified when agent sessions start, end, or error. Works with any [ntfy](https://ntfy.sh) instance (self-hosted or public).
+
+```env
+# .env
+CLIDE_NTFY_URL=https://ntfy.example.com
+CLIDE_NTFY_TOPIC=clide
+```
+
+Subscribe to notifications on your phone via the ntfy app, or open `https://ntfy.example.com/clide` in a browser tab.
+
+| Env var | Default | Description |
+|---------|---------|-------------|
+| `CLIDE_NTFY_URL` | _(empty)_ | ntfy server URL (notifications disabled if unset) |
+| `CLIDE_NTFY_TOPIC` | `clide` | ntfy topic name |
+| `CLIDE_NTFY_DISABLED` | _(empty)_ | Set to `1` to disable notifications |
+
+## LAN CA certificate
+
+If your internal services use TLS with a private CA (e.g. Caddy internal certs), the container can trust it at startup:
+
+```env
+# .env
+CLIDE_CA_URL=https://fs.example.com/root-ca.crt
+```
+
+The cert is downloaded and installed on each container start. If the download fails, startup continues without it.
+
 ## Additional docs
 
 | Doc | Contents |
@@ -213,6 +260,7 @@ See [`DEPLOY.md`](./DEPLOY.md) for Caddy Docker Proxy integration. Uses `docker-
 | [`SECURITY.md`](./SECURITY.md) | Threat model, trust boundaries, attack surface, hardening recommendations |
 | [`RUNBOOK.md`](./RUNBOOK.md) | Operational runbook — health checks, logs, rebuilds, credential rotation, troubleshooting |
 | [`DEPLOY.md`](./DEPLOY.md) | Production deployment with Caddy reverse proxy |
+| [`docs/schema/session-events-v1.md`](./docs/schema/session-events-v1.md) | Session event JSONL schema |
 
 ## Notes
 

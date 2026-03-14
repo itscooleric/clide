@@ -5,6 +5,17 @@ set -euo pipefail
 HOME_DIR="/home/clide"
 export HOME="$HOME_DIR"
 
+# Install LAN CA certificate at runtime if not already done (entrypoint.sh may have
+# already handled this for the web service). Graceful — never blocks startup.
+if [[ -n "${CLIDE_CA_URL:-}" && ! -f /usr/local/share/ca-certificates/lan-ca.crt ]]; then
+  if curl -fsSLk "${CLIDE_CA_URL}" -o /usr/local/share/ca-certificates/lan-ca.crt 2>/dev/null \
+     && update-ca-certificates 2>/dev/null; then
+    echo "clide: installed CA cert from ${CLIDE_CA_URL}"
+  else
+    echo "clide: WARNING - failed to install CA cert from ${CLIDE_CA_URL}; continuing without it"
+  fi
+fi
+
 # Set up egress firewall (CLIDE_FIREWALL=0 to disable; CLIDE_ALLOWED_HOSTS to extend)
 # Skip if a parent entrypoint already ran it for this container.
 if [[ "${CLIDE_FIREWALL_DONE:-0}" != "1" ]]; then
@@ -137,8 +148,18 @@ fi
 # Opt-in tmux wrapping for shell service (set CLIDE_TMUX=1 in .env)
 # Web terminal always uses tmux via entrypoint.sh; this covers make shell / ./clide shell.
 # Drop privileges to clide via gosu before exec so the workload never runs as root.
-if [[ -n "${CLIDE_TMUX:-}" ]]; then
-  exec gosu clide tmux new-session -A -s main "${@:-claude}"
+
+# Wrap agent CLIs with session logger for structured logging + transcript capture.
+# Set CLIDE_LOG_DISABLED=1 to skip. Logger is agent-agnostic — works with claude, codex, etc.
+AGENT_CMD="${*:-claude}"
+if [[ -x /usr/local/bin/session-logger.sh && "${CLIDE_LOG_DISABLED:-}" != "1" ]]; then
+  AGENT_CMD="session-logger.sh ${AGENT_CMD}"
 fi
 
-exec gosu clide "${@:-claude}"
+if [[ -n "${CLIDE_TMUX:-}" ]]; then
+  # shellcheck disable=SC2086
+  exec gosu clide tmux new-session -A -s main ${AGENT_CMD}
+fi
+
+# shellcheck disable=SC2086
+exec gosu clide ${AGENT_CMD}

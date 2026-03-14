@@ -13,6 +13,15 @@ x-base: &base
     OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     GITLAB_TOKEN: ${GITLAB_TOKEN:-}
     GITLAB_HOST: ${GITLAB_HOST:-}
+    # Session logging (v4: Agent Observability)
+    CLIDE_LOG_DISABLED: ${CLIDE_LOG_DISABLED:-}
+    CLIDE_MAX_SESSIONS: ${CLIDE_MAX_SESSIONS:-30}
+    # Push notifications via ntfy (v4: Agent Observability)
+    CLIDE_NTFY_URL: ${CLIDE_NTFY_URL:-}
+    CLIDE_NTFY_TOPIC: ${CLIDE_NTFY_TOPIC:-clide}
+    CLIDE_NTFY_DISABLED: ${CLIDE_NTFY_DISABLED:-}
+    # LAN CA certificate (e.g. Caddy internal TLS root)
+    CLIDE_CA_URL: ${CLIDE_CA_URL:-}
   # Drop all capabilities then re-add only what entrypoint + firewall need.
   # NET_ADMIN  — iptables egress rules (set CLIDE_FIREWALL=0 to disable)
   # SETUID/GID — gosu privilege drop from root → clide

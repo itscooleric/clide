@@ -1,2 +1,5 @@
 .env
 docker-compose.override.yml
+
+# Session logs (generated at runtime inside workspace)
+.clide/logs/

@@ -39,10 +39,6 @@ RUN ARCH="$(uname -m)" \
        -o /usr/local/bin/ttyd \
     && chmod +x /usr/local/bin/ttyd
 
-# Install Claude Code CLI (pinned — bump ARG to upgrade)
-ARG CLAUDE_CODE_VERSION=2.1.71
-RUN npm install -g "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}"
-
 # Install Codex CLI (pinned — bump ARG to upgrade)
 # hadolint ignore=DL3059
 ARG CODEX_VERSION=0.112.0
@@ -71,7 +67,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
        pytest==9.0.2 \
        ruff==0.15.5
 
-ENV PATH="/opt/pyenv/bin:${PATH}"
+ENV PATH="/home/clide/.local/bin:/opt/pyenv/bin:${PATH}"
 
 # Create unprivileged user and set up workspace
 # UID/GID default to 1000 (standard first non-root user on Linux/macOS).
@@ -89,7 +85,9 @@ RUN groupadd -g "${CLIDE_GID}" clide 2>/dev/null || groupmod -n clide "$(getent 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY claude-entrypoint.sh /usr/local/bin/claude-entrypoint.sh
 COPY firewall.sh /usr/local/bin/firewall.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/claude-entrypoint.sh /usr/local/bin/firewall.sh
+COPY scripts/session-logger.sh /usr/local/bin/session-logger.sh
+COPY scripts/notify.sh /usr/local/bin/notify.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/claude-entrypoint.sh /usr/local/bin/firewall.sh /usr/local/bin/session-logger.sh /usr/local/bin/notify.sh
 
 # Default CLAUDE.md template — seeded into /workspace on first run if none exists
 COPY CLAUDE.md.template /usr/local/share/clide/CLAUDE.md.template
@@ -97,8 +95,15 @@ COPY CLAUDE.md.template /usr/local/share/clide/CLAUDE.md.template
 # tmux config — mouse support, sane splits, 256-colour
 COPY --chown=clide:clide .tmux.conf /home/clide/.tmux.conf
 
+# Shell config — wraps agent CLIs through session-logger automatically
+COPY --chown=clide:clide .bashrc /home/clide/.bashrc
+
 # Switch to unprivileged user for user-scoped installs
 USER clide
+
+# Install Claude Code CLI via native installer (self-updating, no npm dependency).
+# Installs to ~/.local/bin/claude — auto-updates at runtime without sudo.
+RUN curl -fsSL https://claude.ai/install.sh | bash
 
 # Trust all directories for git operations.
 # Clide is a single-user dev sandbox — volume-mounted repos from the host
