@@ -117,6 +117,7 @@ prune_sessions() {
   if [[ ! -d "${LOG_DIR}" ]]; then return; fi
 
   local sessions
+  # shellcheck disable=SC2012 -- ls -1dt is intentional for sorting by modification time
   sessions=$(ls -1dt "${LOG_DIR}"/clide-* 2>/dev/null | tail -n +$((MAX_SESSIONS + 1)))
 
   if [[ -z "$sessions" ]]; then return; fi

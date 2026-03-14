@@ -211,7 +211,7 @@ See [`DEPLOY.md`](./DEPLOY.md) for Caddy Docker Proxy integration. Uses `docker-
 
 Every agent session is automatically logged with structured events and a raw terminal transcript. Typing `claude`, `codex`, or `copilot` in any shell goes through `session-logger.sh` automatically.
 
-```
+```text
 /workspace/.clide/logs/<session_id>/
   events.jsonl        — structured JSONL events (start, end, errors)
   transcript.txt.gz   — compressed raw terminal I/O

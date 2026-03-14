@@ -157,7 +157,9 @@ if [[ -x /usr/local/bin/session-logger.sh && "${CLIDE_LOG_DISABLED:-}" != "1" ]]
 fi
 
 if [[ -n "${CLIDE_TMUX:-}" ]]; then
+  # shellcheck disable=SC2086 -- intentional word splitting of AGENT_CMD
   exec gosu clide tmux new-session -A -s main ${AGENT_CMD}
 fi
 
+# shellcheck disable=SC2086 -- intentional word splitting of AGENT_CMD
 exec gosu clide ${AGENT_CMD}
