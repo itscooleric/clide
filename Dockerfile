@@ -95,6 +95,9 @@ COPY CLAUDE.md.template /usr/local/share/clide/CLAUDE.md.template
 # tmux config — mouse support, sane splits, 256-colour
 COPY --chown=clide:clide .tmux.conf /home/clide/.tmux.conf
 
+# Shell config — wraps agent CLIs through session-logger automatically
+COPY --chown=clide:clide .bashrc /home/clide/.bashrc
+
 # Switch to unprivileged user for user-scoped installs
 USER clide
 
