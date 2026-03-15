@@ -11,6 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gnupg \
     gosu \
     iptables \
+    openssh-client \
+    rsync \
     tmux \
     && rm -rf /var/lib/apt/lists/*
 
