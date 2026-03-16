@@ -135,5 +135,9 @@ WORKDIR /workspace
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD sh -c 'PORT="${TTYD_PORT:-7681}"; case "$PORT" in (""|*[!0-9]*) PORT=7681 ;; esac; curl -f "http://localhost:${PORT}${TTYD_BASE_PATH:-/}" || exit 1'
 
+# Bake version info into image (set at build time by docker-compose / Makefile)
+ARG BUILD_VERSION=dev
+RUN echo "${BUILD_VERSION}" > /etc/clide-version
+
 # Default to bash shell (can be overridden by command in docker-compose)
 CMD ["/bin/bash"]

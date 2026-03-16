@@ -1,13 +1,17 @@
 .PHONY: build rebuild web web-stop shell copilot gh claude codex help
 
+# Derive version: branch@shorthash (YYYY-MM-DD)
+BUILD_VERSION := $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "dev")@$(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown") ($(shell date -u +%Y-%m-%d))
+export BUILD_VERSION
+
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
 build: ## Build the clide image
-	docker compose build
+	BUILD_VERSION="$(BUILD_VERSION)" docker compose build
 
 rebuild: ## Rebuild the clide image (no cache)
-	docker compose build --no-cache
+	BUILD_VERSION="$(BUILD_VERSION)" docker compose build --no-cache
 
 web: ## Start web terminal at http://localhost:7681
 	@docker compose up -d web
