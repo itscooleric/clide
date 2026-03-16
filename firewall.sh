@@ -101,12 +101,25 @@ if [[ -n "${CLIDE_ALLOWED_HOSTS:-}" ]]; then
 fi
 
 # 6. Log then reject all other outbound traffic
+# Kernel LOG target (visible via dmesg on hosts that support it)
 _ipt -A OUTPUT -m limit --limit 10/min --limit-burst 5 -j LOG --log-prefix "CLIDE-REJECT: " --log-level 4
 _ip6 -A OUTPUT -m limit --limit 10/min --limit-burst 5 -j LOG --log-prefix "CLIDE-REJECT: " --log-level 4
 _ipt -A OUTPUT -j REJECT --reject-with icmp-port-unreachable
 _ip6 -A OUTPUT -j REJECT
 
 echo "firewall: egress allowlist active — all other outbound traffic rejected"
+
+# 7. Start egress audit daemon if enabled (background, writes to JSONL)
+if [[ "${CLIDE_EGRESS_AUDIT:-0}" == "1" ]]; then
+  EGRESS_SCRIPT="$(dirname "$0")/egress-audit.sh"
+  if [[ ! -x "$EGRESS_SCRIPT" ]]; then
+    EGRESS_SCRIPT="/usr/local/bin/egress-audit.sh"
+  fi
+  if [[ -x "$EGRESS_SCRIPT" ]]; then
+    "$EGRESS_SCRIPT" &
+    echo "firewall: egress audit daemon started (pid $!)"
+  fi
+fi
 
 # ── If used as entrypoint, drop to unprivileged user and exec the command ────
 # iptables rules are now in place; gosu drops root before the workload starts.
