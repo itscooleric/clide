@@ -91,7 +91,8 @@ COPY firewall.sh /usr/local/bin/firewall.sh
 COPY scripts/session-logger.sh /usr/local/bin/session-logger.sh
 COPY scripts/notify.sh /usr/local/bin/notify.sh
 COPY scripts/token-cost.py /usr/local/bin/token-cost.py
-RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/claude-entrypoint.sh /usr/local/bin/firewall.sh /usr/local/bin/session-logger.sh /usr/local/bin/notify.sh /usr/local/bin/token-cost.py
+COPY scripts/egress-audit.sh /usr/local/bin/egress-audit.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/claude-entrypoint.sh /usr/local/bin/firewall.sh /usr/local/bin/session-logger.sh /usr/local/bin/notify.sh /usr/local/bin/token-cost.py /usr/local/bin/egress-audit.sh
 
 # Default CLAUDE.md template — seeded into /workspace on first run if none exists
 COPY CLAUDE.md.template /usr/local/share/clide/CLAUDE.md.template

@@ -21,6 +21,8 @@ x-base: &base
     CLIDE_NTFY_URL: ${CLIDE_NTFY_URL:-}
     CLIDE_NTFY_TOPIC: ${CLIDE_NTFY_TOPIC:-clide}
     CLIDE_NTFY_DISABLED: ${CLIDE_NTFY_DISABLED:-}
+    # Egress audit — log outbound connections to JSONL (v4: Agent Observability)
+    CLIDE_EGRESS_AUDIT: ${CLIDE_EGRESS_AUDIT:-0}
     # LAN CA certificate (e.g. Caddy internal TLS root)
     CLIDE_CA_URL: ${CLIDE_CA_URL:-}
   # Drop all capabilities then re-add only what entrypoint + firewall need.
