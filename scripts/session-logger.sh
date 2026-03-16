@@ -273,6 +273,32 @@ except: pass
   fi
   if [[ -f "${SESSION_DIR}/conversation.jsonl" ]]; then
     _end_args+=("has_conversation=true")
+
+    # ── Token / cost tracking ──────────────────────────────────────
+    # Parse the conversation log for token counts and estimated cost.
+    # Uses the Python script for reliable JSON parsing + pricing math.
+    COST_SCRIPT="$(dirname "$0")/token-cost.py"
+    if [[ ! -x "$COST_SCRIPT" ]]; then
+      COST_SCRIPT="/usr/local/bin/token-cost.py"
+    fi
+    if [[ -x "$COST_SCRIPT" || -f "$COST_SCRIPT" ]]; then
+      _cost_json=$(python3 "$COST_SCRIPT" "${SESSION_DIR}/conversation.jsonl" 2>/dev/null || echo '{}')
+      if [[ -n "$_cost_json" && "$_cost_json" != "{}" ]]; then
+        # Extract fields and add to session_end args
+        _input_tokens=$(echo "$_cost_json" | python3 -c "import json,sys; print(json.load(sys.stdin).get('input_tokens',0))" 2>/dev/null || echo 0)
+        _output_tokens=$(echo "$_cost_json" | python3 -c "import json,sys; print(json.load(sys.stdin).get('output_tokens',0))" 2>/dev/null || echo 0)
+        _total_tokens=$(echo "$_cost_json" | python3 -c "import json,sys; print(json.load(sys.stdin).get('total_tokens',0))" 2>/dev/null || echo 0)
+        _cost_usd=$(echo "$_cost_json" | python3 -c "import json,sys; print(json.load(sys.stdin).get('estimated_cost_usd',0))" 2>/dev/null || echo 0)
+        _turns=$(echo "$_cost_json" | python3 -c "import json,sys; print(json.load(sys.stdin).get('turns',0))" 2>/dev/null || echo 0)
+
+        _end_args+=("input_tokens=${_input_tokens}")
+        _end_args+=("output_tokens=${_output_tokens}")
+        _end_args+=("total_tokens=${_total_tokens}")
+        _end_args+=("estimated_cost_usd=${_cost_usd}")
+        _end_args+=("turns=${_turns}")
+        echo "[session-logger] Tokens: ${_input_tokens} in / ${_output_tokens} out (${_total_tokens} total) — \$${_cost_usd}"
+      fi
+    fi
   fi
   emit_event "session_end" "${_end_args[@]}"
 
