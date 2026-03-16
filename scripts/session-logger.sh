@@ -43,7 +43,7 @@ fi
 generate_session_id() {
   # Timestamp prefix (ms since epoch in base36) + random suffix
   local ts
-  ts=$(python3 -c "import time,string; t=int(time.time()*1000); chars=string.digits+string.ascii_lowercase; r=''; 
+  ts=$(python3 -c "import time,string; t=int(time.time()*1000); chars=string.digits+string.ascii_lowercase; r='';
 while t>0: r=chars[t%36]+r; t//=36
 print(r)" 2>/dev/null || date +%s)
   local rand
@@ -162,6 +162,110 @@ detect_model() {
   esac
 }
 
+# ── Cleanup (runs on EXIT — covers clean exit, Ctrl+C, SIGTERM) ──
+
+# Guard against the cleanup handler running more than once (e.g. a signal
+# fires during cleanup itself).
+_CLEANUP_DONE=0
+
+cleanup() {
+  if [[ "$_CLEANUP_DONE" == "1" ]]; then return; fi
+  _CLEANUP_DONE=1
+
+  # ── Compress raw transcript ──────────────────────────────────
+  if [[ -f "${RAW_TRANSCRIPT}" && -s "${RAW_TRANSCRIPT}" ]]; then
+    gzip -f "${RAW_TRANSCRIPT}" 2>/dev/null || true
+  fi
+
+  # ── Harvest Claude Code conversation log ─────────────────────
+  # Claude Code saves structured JSONL at ~/.claude/projects/<proj>/<uuid>.jsonl
+  # with full conversation: user messages, assistant responses (including
+  # thinking), tool_use calls, and tool_results. This is the readable
+  # session log — far superior to raw PTY capture.
+  CLAUDE_SESSION_ID=""
+  if [[ "$AGENT" == "claude" && -d "$CLAUDE_PROJECTS_DIR" ]]; then
+    CLAUDE_SESSIONS_AFTER=$(find "$CLAUDE_PROJECTS_DIR" -maxdepth 2 -name '*.jsonl' -newer "${EVENTS_FILE}" 2>/dev/null | sort || true)
+
+    # Find new JSONL files created during this session
+    NEW_SESSION_FILES=""
+    if [[ -n "$CLAUDE_SESSIONS_AFTER" ]]; then
+      if [[ -n "$CLAUDE_SESSIONS_BEFORE" ]]; then
+        NEW_SESSION_FILES=$(comm -13 <(echo "$CLAUDE_SESSIONS_BEFORE") <(echo "$CLAUDE_SESSIONS_AFTER") || true)
+      else
+        NEW_SESSION_FILES="$CLAUDE_SESSIONS_AFTER"
+      fi
+    fi
+
+    # Pick the most recently modified new file (there should typically be exactly one)
+    if [[ -n "$NEW_SESSION_FILES" ]]; then
+      LATEST_SESSION=$(echo "$NEW_SESSION_FILES" | while read -r f; do
+        echo "$(stat -c '%Y' "$f" 2>/dev/null || echo 0) $f"
+      done | sort -rn | head -1 | cut -d' ' -f2-)
+
+      if [[ -n "$LATEST_SESSION" && -f "$LATEST_SESSION" ]]; then
+        # Symlink (not copy) to save disk — Claude manages its own retention
+        ln -sf "$LATEST_SESSION" "${SESSION_DIR}/conversation.jsonl"
+        CONV_LINES=$(wc -l < "$LATEST_SESSION" 2>/dev/null || echo 0)
+        CONV_SIZE=$(stat -c '%s' "$LATEST_SESSION" 2>/dev/null || echo 0)
+        echo "[session-logger] Linked conversation log: ${LATEST_SESSION} (${CONV_LINES} messages, $(( CONV_SIZE / 1024 ))KB)"
+      fi
+    fi
+
+    # Also capture the Claude session ID if available from session files
+    for sf in "${HOME}/.claude/sessions/"*.json; do
+      if [[ -f "$sf" ]]; then
+        _sid=$(python3 -c "
+import json, sys
+try:
+    d = json.load(open('$sf'))
+    if isinstance(d, dict) and d.get('sessionId'):
+        print(d['sessionId'])
+except: pass
+" 2>/dev/null || true)
+        if [[ -n "$_sid" ]]; then
+          CLAUDE_SESSION_ID="$_sid"
+        fi
+      fi
+    done
+  fi
+
+  # ── Emit session_end ───────────────────────────────────────────
+  local _outcome
+  _outcome=$([ "${EXIT_CODE}" -eq 0 ] && echo 'success' || echo 'error')
+
+  # If we got here via signal (not clean exit), mark it
+  if [[ -n "${_SIGNAL:-}" ]]; then
+    _outcome="killed"
+  fi
+
+  local _end_args=(
+    "agent=${AGENT}"
+    "exit_code=${EXIT_CODE}"
+    "outcome=${_outcome}"
+  )
+  if [[ -n "${_SIGNAL:-}" ]]; then
+    _end_args+=("signal=${_SIGNAL}")
+  fi
+  if [[ -n "${CLAUDE_SESSION_ID:-}" ]]; then
+    _end_args+=("claude_session_id=${CLAUDE_SESSION_ID}")
+  fi
+  if [[ -L "${SESSION_DIR}/conversation.jsonl" ]]; then
+    _end_args+=("has_conversation=true")
+  fi
+  emit_event "session_end" "${_end_args[@]}"
+
+  # ── Send end/error notification ────────────────────────────────
+  if [[ -x "${NOTIFY_SCRIPT:-}" ]]; then
+    if [[ ${EXIT_CODE} -eq 0 ]]; then
+      "$NOTIFY_SCRIPT" end "${SESSION_ID}" "${AGENT}" "exit 0" &
+    else
+      "$NOTIFY_SCRIPT" error "${SESSION_ID}" "${AGENT}" "exit ${EXIT_CODE}" &
+    fi
+  fi
+
+  echo "[session-logger] Session ${SESSION_ID} ended (exit=${EXIT_CODE})"
+}
+
 # ── Main ──────────────────────────────────────────────────────────
 
 AGENT=$(detect_agent "${1:-}")
@@ -195,96 +299,25 @@ if [[ "$AGENT" == "claude" && -d "$CLAUDE_PROJECTS_DIR" ]]; then
   CLAUDE_SESSIONS_BEFORE=$(find "$CLAUDE_PROJECTS_DIR" -maxdepth 2 -name '*.jsonl' -newer "${EVENTS_FILE}" 2>/dev/null | sort || true)
 fi
 
+# ── Install cleanup trap ─────────────────────────────────────────
+# Runs on normal exit (EXIT) and common kill signals so session_end +
+# conversation harvesting happen even when the agent is Ctrl+C'd or
+# the container is stopped.
+EXIT_CODE=0
+_SIGNAL=""
+trap 'cleanup' EXIT
+trap '_SIGNAL=INT;  EXIT_CODE=130; exit 130' INT
+trap '_SIGNAL=TERM; EXIT_CODE=143; exit 143' TERM
+trap '_SIGNAL=HUP;  EXIT_CODE=129; exit 129' HUP
+
 # ── Run the agent ────────────────────────────────────────────────
 # Raw PTY transcript is optional (VT100 byte stream — not human-readable
 # for TUI agents like Claude Code, but useful for scriptreplay).
-EXIT_CODE=0
 if [[ "${CLIDE_RAW_TRANSCRIPT:-0}" == "1" ]] && command -v script >/dev/null 2>&1; then
   script -q -f -c "$*" "${RAW_TRANSCRIPT}" || EXIT_CODE=$?
-  # Compress raw transcript
-  if [[ -f "${RAW_TRANSCRIPT}" && -s "${RAW_TRANSCRIPT}" ]]; then
-    gzip -f "${RAW_TRANSCRIPT}" 2>/dev/null || true
-  fi
 else
   "$@" || EXIT_CODE=$?
 fi
 
-# ── Harvest Claude Code conversation log ─────────────────────────
-# Claude Code saves structured JSONL at ~/.claude/projects/<proj>/<uuid>.jsonl
-# with full conversation: user messages, assistant responses (including
-# thinking), tool_use calls, and tool_results. This is the readable
-# session log — far superior to raw PTY capture.
-if [[ "$AGENT" == "claude" && -d "$CLAUDE_PROJECTS_DIR" ]]; then
-  CLAUDE_SESSIONS_AFTER=$(find "$CLAUDE_PROJECTS_DIR" -maxdepth 2 -name '*.jsonl' -newer "${EVENTS_FILE}" 2>/dev/null | sort || true)
-
-  # Find new JSONL files created during this session
-  NEW_SESSION_FILES=""
-  if [[ -n "$CLAUDE_SESSIONS_AFTER" ]]; then
-    if [[ -n "$CLAUDE_SESSIONS_BEFORE" ]]; then
-      NEW_SESSION_FILES=$(comm -13 <(echo "$CLAUDE_SESSIONS_BEFORE") <(echo "$CLAUDE_SESSIONS_AFTER") || true)
-    else
-      NEW_SESSION_FILES="$CLAUDE_SESSIONS_AFTER"
-    fi
-  fi
-
-  # Pick the most recently modified new file (there should typically be exactly one)
-  if [[ -n "$NEW_SESSION_FILES" ]]; then
-    LATEST_SESSION=$(echo "$NEW_SESSION_FILES" | while read -r f; do
-      echo "$(stat -c '%Y' "$f" 2>/dev/null || echo 0) $f"
-    done | sort -rn | head -1 | cut -d' ' -f2-)
-
-    if [[ -n "$LATEST_SESSION" && -f "$LATEST_SESSION" ]]; then
-      # Symlink (not copy) to save disk — Claude manages its own retention
-      ln -sf "$LATEST_SESSION" "${SESSION_DIR}/conversation.jsonl"
-      CONV_LINES=$(wc -l < "$LATEST_SESSION" 2>/dev/null || echo 0)
-      CONV_SIZE=$(stat -c '%s' "$LATEST_SESSION" 2>/dev/null || echo 0)
-      echo "[session-logger] Linked conversation log: ${LATEST_SESSION} (${CONV_LINES} messages, $(( CONV_SIZE / 1024 ))KB)"
-    fi
-  fi
-
-  # Also capture the Claude session ID if available from session files
-  CLAUDE_SESSION_ID=""
-  for sf in "${HOME}/.claude/sessions/"*.json; do
-    if [[ -f "$sf" ]]; then
-      # Find the session that was most recently active
-      _sid=$(python3 -c "
-import json, sys
-try:
-    d = json.load(open('$sf'))
-    if isinstance(d, dict) and d.get('sessionId'):
-        print(d['sessionId'])
-except: pass
-" 2>/dev/null || true)
-      if [[ -n "$_sid" ]]; then
-        CLAUDE_SESSION_ID="$_sid"
-      fi
-    fi
-  done
-fi
-
-# Emit session_end
-_end_args=(
-  "agent=${AGENT}"
-  "exit_code=${EXIT_CODE}"
-  "outcome=$([ $EXIT_CODE -eq 0 ] && echo 'success' || echo 'error')"
-)
-if [[ -n "${CLAUDE_SESSION_ID:-}" ]]; then
-  _end_args+=("claude_session_id=${CLAUDE_SESSION_ID}")
-fi
-if [[ -L "${SESSION_DIR}/conversation.jsonl" ]]; then
-  _end_args+=("has_conversation=true")
-fi
-emit_event "session_end" "${_end_args[@]}"
-
-# Send end/error notification
-if [[ -x "$NOTIFY_SCRIPT" ]]; then
-  if [[ $EXIT_CODE -eq 0 ]]; then
-    "$NOTIFY_SCRIPT" end "${SESSION_ID}" "${AGENT}" "exit 0" &
-  else
-    "$NOTIFY_SCRIPT" error "${SESSION_ID}" "${AGENT}" "exit ${EXIT_CODE}" &
-  fi
-fi
-
-echo "[session-logger] Session ${SESSION_ID} ended (exit=${EXIT_CODE})"
-
+# cleanup runs automatically via the EXIT trap
 exit ${EXIT_CODE}
