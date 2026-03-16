@@ -168,6 +168,7 @@ detect_model() {
 # fires during cleanup itself).
 _CLEANUP_DONE=0
 
+# shellcheck disable=SC2329  # invoked indirectly via trap
 cleanup() {
   if [[ "$_CLEANUP_DONE" == "1" ]]; then return; fi
   _CLEANUP_DONE=1
