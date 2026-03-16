@@ -4,6 +4,7 @@ x-base: &base
     args:
       CLIDE_UID: ${CLIDE_UID:-1000}
       CLIDE_GID: ${CLIDE_GID:-1000}
+      BUILD_VERSION: ${BUILD_VERSION:-dev}
   image: clide
   env_file: .env
   environment:

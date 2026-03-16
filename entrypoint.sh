@@ -1,6 +1,13 @@
 #!/bin/bash
 set -e
 
+# Print version at startup
+CLIDE_VERSION="dev"
+if [[ -f /etc/clide-version ]]; then
+  CLIDE_VERSION=$(cat /etc/clide-version)
+fi
+echo "clide: starting v${CLIDE_VERSION}"
+
 # Install LAN CA certificate at runtime (e.g. Caddy internal TLS root).
 # Set CLIDE_CA_URL in .env to the URL of your CA cert. Uses -k for the
 # initial fetch since the cert isn't trusted yet. Graceful — never blocks startup.

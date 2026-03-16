@@ -34,7 +34,23 @@ Examples:
 EOF
 }
 
+clide_version() {
+  # Inside container: read baked-in version; outside: derive from git
+  if [[ -f /etc/clide-version ]]; then
+    cat /etc/clide-version
+  elif command -v git &>/dev/null && git rev-parse --git-dir &>/dev/null 2>&1; then
+    local sha branch
+    sha=$(git rev-parse --short HEAD 2>/dev/null)
+    branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+    echo "${branch}@${sha}"
+  else
+    echo "dev"
+  fi
+}
+
 splash() {
+  local ver
+  ver=$(clide_version)
   echo ""
   echo "  ██████╗██╗     ██╗██████╗ ███████╗"
   echo " ██╔════╝██║     ██║██╔══██╗██╔════╝"
@@ -43,7 +59,7 @@ splash() {
   echo " ╚██████╗███████╗██║██████╔╝███████╗"
   echo "  ╚═════╝╚══════╝╚═╝╚═════╝ ╚══════╝"
   echo ""
-  echo "  CLI Development Environment"
+  echo "  CLI Development Environment  (${ver})"
   echo "  Copilot · GitHub CLI · Claude Code · Codex CLI"
   echo ""
 }

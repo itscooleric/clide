@@ -11,6 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gnupg \
     gosu \
     iptables \
+    openssh-client \
+    rsync \
     tmux \
     && rm -rf /var/lib/apt/lists/*
 
@@ -132,6 +134,10 @@ WORKDIR /workspace
 # Port is validated as numeric to prevent injection; base path is respected.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD sh -c 'PORT="${TTYD_PORT:-7681}"; case "$PORT" in (""|*[!0-9]*) PORT=7681 ;; esac; curl -f "http://localhost:${PORT}${TTYD_BASE_PATH:-/}" || exit 1'
+
+# Bake version info into image (set at build time by docker-compose / Makefile)
+ARG BUILD_VERSION=dev
+RUN echo "${BUILD_VERSION}" > /etc/clide-version
 
 # Default to bash shell (can be overridden by command in docker-compose)
 CMD ["/bin/bash"]
