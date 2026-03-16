@@ -80,9 +80,12 @@ while true; do
     remote_port=$(hex_to_port "$remote_addr")
     local_port=$(hex_to_port "$local_addr")
 
-    # Skip loopback and Docker internal
+    # Skip loopback, private/Docker networks (only log public egress)
     [[ "$remote_ip" == "127."* ]] && continue
-    [[ "$remote_ip" == "172.1"* && "$remote_port" == "53" ]] && continue
+    [[ "$remote_ip" == "172."* ]] && continue
+    [[ "$remote_ip" == "10."* ]] && continue
+    [[ "$remote_ip" == "192.168."* ]] && continue
+    [[ "$remote_ip" == "0.0.0.0" ]] && continue
 
     # Unique key for dedup
     conn_key="${remote_ip}:${remote_port}:${local_port}"
