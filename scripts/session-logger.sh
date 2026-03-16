@@ -188,33 +188,47 @@ cleanup() {
   # with full conversation: user messages, assistant responses (including
   # thinking), tool_use calls, and tool_results. This is the readable
   # session log — far superior to raw PTY capture.
+  #
+  # We copy (not symlink) the file so it's readable from the host and
+  # other containers (e.g. Clem's file explorer). The background watcher
+  # may have already been copying periodically — this is the final sync.
   CLAUDE_SESSION_ID=""
   if [[ "$AGENT" == "claude" && -d "$CLAUDE_PROJECTS_DIR" ]]; then
-    CLAUDE_SESSIONS_AFTER=$(find "$CLAUDE_PROJECTS_DIR" -maxdepth 2 -name '*.jsonl' -newer "${EVENTS_FILE}" 2>/dev/null | sort || true)
+    # Try the source path saved by the background watcher first
+    _CONV_SRC=""
+    if [[ -f "${SESSION_DIR}/.conv_source" ]]; then
+      _CONV_SRC=$(cat "${SESSION_DIR}/.conv_source" 2>/dev/null || true)
+    fi
 
-    # Find new JSONL files created during this session
-    NEW_SESSION_FILES=""
-    if [[ -n "$CLAUDE_SESSIONS_AFTER" ]]; then
-      if [[ -n "$CLAUDE_SESSIONS_BEFORE" ]]; then
-        NEW_SESSION_FILES=$(comm -13 <(echo "$CLAUDE_SESSIONS_BEFORE") <(echo "$CLAUDE_SESSIONS_AFTER") || true)
-      else
-        NEW_SESSION_FILES="$CLAUDE_SESSIONS_AFTER"
+    # If watcher didn't find it, search now (covers cases where session
+    # was too short for the watcher to catch it)
+    if [[ -z "$_CONV_SRC" || ! -f "$_CONV_SRC" ]]; then
+      CLAUDE_SESSIONS_AFTER=$(find "$CLAUDE_PROJECTS_DIR" -maxdepth 2 -name '*.jsonl' -newer "${EVENTS_FILE}" 2>/dev/null | sort || true)
+
+      NEW_SESSION_FILES=""
+      if [[ -n "$CLAUDE_SESSIONS_AFTER" ]]; then
+        if [[ -n "$CLAUDE_SESSIONS_BEFORE" ]]; then
+          NEW_SESSION_FILES=$(comm -13 <(echo "$CLAUDE_SESSIONS_BEFORE") <(echo "$CLAUDE_SESSIONS_AFTER") || true)
+        else
+          NEW_SESSION_FILES="$CLAUDE_SESSIONS_AFTER"
+        fi
+      fi
+
+      if [[ -n "$NEW_SESSION_FILES" ]]; then
+        _CONV_SRC=$(echo "$NEW_SESSION_FILES" | while read -r f; do
+          echo "$(stat -c '%Y' "$f" 2>/dev/null || echo 0) $f"
+        done | sort -rn | head -1 | cut -d' ' -f2-)
       fi
     fi
 
-    # Pick the most recently modified new file (there should typically be exactly one)
-    if [[ -n "$NEW_SESSION_FILES" ]]; then
-      LATEST_SESSION=$(echo "$NEW_SESSION_FILES" | while read -r f; do
-        echo "$(stat -c '%Y' "$f" 2>/dev/null || echo 0) $f"
-      done | sort -rn | head -1 | cut -d' ' -f2-)
-
-      if [[ -n "$LATEST_SESSION" && -f "$LATEST_SESSION" ]]; then
-        # Symlink (not copy) to save disk — Claude manages its own retention
-        ln -sf "$LATEST_SESSION" "${SESSION_DIR}/conversation.jsonl"
-        CONV_LINES=$(wc -l < "$LATEST_SESSION" 2>/dev/null || echo 0)
-        CONV_SIZE=$(stat -c '%s' "$LATEST_SESSION" 2>/dev/null || echo 0)
-        echo "[session-logger] Linked conversation log: ${LATEST_SESSION} (${CONV_LINES} messages, $(( CONV_SIZE / 1024 ))KB)"
-      fi
+    # Final copy of conversation log
+    if [[ -n "$_CONV_SRC" && -f "$_CONV_SRC" ]]; then
+      cp -f "$_CONV_SRC" "${SESSION_DIR}/conversation.jsonl"
+      CONV_LINES=$(wc -l < "$_CONV_SRC" 2>/dev/null || echo 0)
+      CONV_SIZE=$(stat -c '%s' "$_CONV_SRC" 2>/dev/null || echo 0)
+      echo "[session-logger] Copied conversation log: ${_CONV_SRC} (${CONV_LINES} messages, $(( CONV_SIZE / 1024 ))KB)"
+      # Clean up source marker
+      rm -f "${SESSION_DIR}/.conv_source"
     fi
 
     # Also capture the Claude session ID if available from session files
@@ -255,7 +269,7 @@ except: pass
   if [[ -n "${CLAUDE_SESSION_ID:-}" ]]; then
     _end_args+=("claude_session_id=${CLAUDE_SESSION_ID}")
   fi
-  if [[ -L "${SESSION_DIR}/conversation.jsonl" ]]; then
+  if [[ -f "${SESSION_DIR}/conversation.jsonl" ]]; then
     _end_args+=("has_conversation=true")
   fi
   emit_event "session_end" "${_end_args[@]}"
@@ -305,12 +319,15 @@ if [[ "$AGENT" == "claude" && -d "$CLAUDE_PROJECTS_DIR" ]]; then
   CLAUDE_SESSIONS_BEFORE=$(find "$CLAUDE_PROJECTS_DIR" -maxdepth 2 -name '*.jsonl' -newer "${EVENTS_FILE}" 2>/dev/null | sort || true)
 fi
 
-# ── Early-link conversation log ──────────────────────────────────
+# ── Early-copy conversation log ──────────────────────────────────
 # Claude Code creates its conversation JSONL within seconds of starting.
-# This background watcher finds it and symlinks it into the session dir
-# so the log is readable live throughout the session (Claude writes to
-# it continuously). Polls briefly then exits — no ongoing overhead.
+# This background watcher finds it and copies it into the session dir
+# so the log is readable from the host / other containers (symlinks
+# would point inside this container and break on the host).
+# After the initial copy, it re-syncs every 30s so external viewers
+# (e.g. Clem file explorer) can see updates during long sessions.
 _WATCHER_PID=""
+_CONV_SOURCE=""   # set by watcher, read by cleanup for final copy
 if [[ "$AGENT" == "claude" && -d "$CLAUDE_PROJECTS_DIR" ]]; then
   (
     # Poll up to 60s for a new conversation file to appear
@@ -331,8 +348,15 @@ if [[ "$AGENT" == "claude" && -d "$CLAUDE_PROJECTS_DIR" ]]; then
           echo "$(stat -c '%Y' "$f" 2>/dev/null || echo 0) $f"
         done | sort -rn | head -1 | cut -d' ' -f2-)
         if [[ -n "$_latest" && -f "$_latest" ]]; then
-          ln -sf "$_latest" "${SESSION_DIR}/conversation.jsonl"
-          echo "[session-logger] Linked conversation log (live): ${_latest}"
+          cp -f "$_latest" "${SESSION_DIR}/conversation.jsonl"
+          # Write source path so cleanup can do a final copy
+          echo "$_latest" > "${SESSION_DIR}/.conv_source"
+          echo "[session-logger] Copied conversation log: ${_latest}"
+          # Periodic re-sync while session is active
+          while true; do
+            sleep 30
+            cp -f "$_latest" "${SESSION_DIR}/conversation.jsonl" 2>/dev/null || break
+          done
         fi
         break
       fi

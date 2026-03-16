@@ -40,7 +40,8 @@ Emitted when the agent session exits.
 ```
 /workspace/.clide/logs/<session_id>/
   events.jsonl        — structured event log
-  transcript.txt.gz   — compressed raw terminal I/O
+  conversation.jsonl  — Claude Code conversation log (copied from internal storage)
+  transcript.raw.gz   — compressed raw terminal I/O (optional, CLIDE_RAW_TRANSCRIPT=1)
 ```
 
 ## Secret Scrubbing
