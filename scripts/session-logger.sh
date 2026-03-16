@@ -224,6 +224,7 @@ cleanup() {
     # Final copy of conversation log
     if [[ -n "$_CONV_SRC" && -f "$_CONV_SRC" ]]; then
       cp -f "$_CONV_SRC" "${SESSION_DIR}/conversation.jsonl"
+      chmod 644 "${SESSION_DIR}/conversation.jsonl" 2>/dev/null || true
       CONV_LINES=$(wc -l < "$_CONV_SRC" 2>/dev/null || echo 0)
       CONV_SIZE=$(stat -c '%s' "$_CONV_SRC" 2>/dev/null || echo 0)
       echo "[session-logger] Copied conversation log: ${_CONV_SRC} (${CONV_LINES} messages, $(( CONV_SIZE / 1024 ))KB)"
@@ -349,6 +350,7 @@ if [[ "$AGENT" == "claude" && -d "$CLAUDE_PROJECTS_DIR" ]]; then
         done | sort -rn | head -1 | cut -d' ' -f2-)
         if [[ -n "$_latest" && -f "$_latest" ]]; then
           cp -f "$_latest" "${SESSION_DIR}/conversation.jsonl"
+          chmod 644 "${SESSION_DIR}/conversation.jsonl" 2>/dev/null || true
           # Write source path so cleanup can do a final copy
           echo "$_latest" > "${SESSION_DIR}/.conv_source"
           echo "[session-logger] Copied conversation log: ${_latest}"
@@ -356,6 +358,7 @@ if [[ "$AGENT" == "claude" && -d "$CLAUDE_PROJECTS_DIR" ]]; then
           while true; do
             sleep 30
             cp -f "$_latest" "${SESSION_DIR}/conversation.jsonl" 2>/dev/null || break
+            chmod 644 "${SESSION_DIR}/conversation.jsonl" 2>/dev/null || true
           done
         fi
         break
