@@ -172,6 +172,12 @@ cleanup() {
   if [[ "$_CLEANUP_DONE" == "1" ]]; then return; fi
   _CLEANUP_DONE=1
 
+  # Kill the conversation watcher if still running
+  if [[ -n "${_WATCHER_PID:-}" ]]; then
+    kill "$_WATCHER_PID" 2>/dev/null || true
+    wait "$_WATCHER_PID" 2>/dev/null || true
+  fi
+
   # ── Compress raw transcript ──────────────────────────────────
   if [[ -f "${RAW_TRANSCRIPT}" && -s "${RAW_TRANSCRIPT}" ]]; then
     gzip -f "${RAW_TRANSCRIPT}" 2>/dev/null || true
@@ -297,6 +303,42 @@ CLAUDE_PROJECTS_DIR="${HOME}/.claude/projects"
 CLAUDE_SESSIONS_BEFORE=""
 if [[ "$AGENT" == "claude" && -d "$CLAUDE_PROJECTS_DIR" ]]; then
   CLAUDE_SESSIONS_BEFORE=$(find "$CLAUDE_PROJECTS_DIR" -maxdepth 2 -name '*.jsonl' -newer "${EVENTS_FILE}" 2>/dev/null | sort || true)
+fi
+
+# ── Early-link conversation log ──────────────────────────────────
+# Claude Code creates its conversation JSONL within seconds of starting.
+# This background watcher finds it and symlinks it into the session dir
+# so the log is readable live throughout the session (Claude writes to
+# it continuously). Polls briefly then exits — no ongoing overhead.
+_WATCHER_PID=""
+if [[ "$AGENT" == "claude" && -d "$CLAUDE_PROJECTS_DIR" ]]; then
+  (
+    # Poll up to 60s for a new conversation file to appear
+    for _i in $(seq 1 30); do
+      sleep 2
+      _after=$(find "$CLAUDE_PROJECTS_DIR" -maxdepth 2 -name '*.jsonl' -newer "${EVENTS_FILE}" 2>/dev/null | sort || true)
+      _new=""
+      if [[ -n "$_after" ]]; then
+        if [[ -n "$CLAUDE_SESSIONS_BEFORE" ]]; then
+          _new=$(comm -13 <(echo "$CLAUDE_SESSIONS_BEFORE") <(echo "$_after") || true)
+        else
+          _new="$_after"
+        fi
+      fi
+      if [[ -n "$_new" ]]; then
+        # Pick most recently modified
+        _latest=$(echo "$_new" | while read -r f; do
+          echo "$(stat -c '%Y' "$f" 2>/dev/null || echo 0) $f"
+        done | sort -rn | head -1 | cut -d' ' -f2-)
+        if [[ -n "$_latest" && -f "$_latest" ]]; then
+          ln -sf "$_latest" "${SESSION_DIR}/conversation.jsonl"
+          echo "[session-logger] Linked conversation log (live): ${_latest}"
+        fi
+        break
+      fi
+    done
+  ) &
+  _WATCHER_PID=$!
 fi
 
 # ── Install cleanup trap ─────────────────────────────────────────
