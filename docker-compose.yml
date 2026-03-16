@@ -2,8 +2,8 @@ x-base: &base
   build:
     context: .
     args:
-      CLIDE_UID: ${CLIDE_UID:-1000}
-      CLIDE_GID: ${CLIDE_GID:-1000}
+      CLIDE_UID: ${CLIDE_UID:-1100}
+      CLIDE_GID: ${CLIDE_GID:-1100}
       BUILD_VERSION: ${BUILD_VERSION:-dev}
   image: clide
   env_file: .env
@@ -42,9 +42,11 @@ x-base: &base
   security_opt:
     - no-new-privileges:true
   # Resource guardrails — prevent runaway AI workloads from starving the host.
-  mem_limit: 4g
-  cpus: '4.0'
-  pids_limit: 512
+  # Override via .env: CLIDE_MEM_LIMIT, CLIDE_CPUS, CLIDE_PIDS_LIMIT
+  # Use '2.0' on 2-core VPS, '4.0' on 4+ core hosts.
+  mem_limit: ${CLIDE_MEM_LIMIT:-4g}
+  cpus: '${CLIDE_CPUS:-2.0}'
+  pids_limit: ${CLIDE_PIDS_LIMIT:-512}
   volumes:
     - ${PROJECT_DIR:-..}:/workspace
   stdin_open: true
@@ -62,7 +64,7 @@ services:
     entrypoint: ["/usr/local/bin/entrypoint.sh"]
     command: []
     ports:
-      - "${TTYD_PORT:-7681}:7681"
+      - "${CLIDE_BIND:-0.0.0.0}:${TTYD_PORT:-7681}:7681"
     labels:
       # Caddy Docker Proxy labels (only active if on caddy network)
       caddy: ${CADDY_HOSTNAME:-clide.lan.wubi.sh}

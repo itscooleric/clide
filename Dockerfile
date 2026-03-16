@@ -72,10 +72,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV PATH="/home/clide/.local/bin:/opt/pyenv/bin:${PATH}"
 
 # Create unprivileged user and set up workspace
-# UID/GID default to 1000 (standard first non-root user on Linux/macOS).
-# Override at build time:  CLIDE_UID=$(id -u) CLIDE_GID=$(id -g) docker compose build
-ARG CLIDE_UID=1000
-ARG CLIDE_GID=1000
+# UID/GID default to 1100 to avoid conflicts with common host groups
+# (GID 1000 is often 'docker' on Ubuntu). Override in .env or at build time:
+#   CLIDE_UID=$(id -u) CLIDE_GID=$(id -g) docker compose build
+ARG CLIDE_UID=1100
+ARG CLIDE_GID=1100
 RUN groupadd -g "${CLIDE_GID}" clide 2>/dev/null || groupmod -n clide "$(getent group "${CLIDE_GID}" | cut -d: -f1)" \
     && useradd -m -l -s /bin/bash -u "${CLIDE_UID}" -g clide clide \
     && mkdir -p /workspace \
