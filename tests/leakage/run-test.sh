@@ -29,7 +29,7 @@ echo ""
 
 # Step 2: Clear previous intercept logs
 echo "▶ Step 2: Clearing previous intercept logs..."
-> "${LOG_DIR}/intercept.jsonl" 2>/dev/null || true
+true > "${LOG_DIR}/intercept.jsonl" 2>/dev/null || true
 echo "   Cleared ${LOG_DIR}/intercept.jsonl"
 echo ""
 
