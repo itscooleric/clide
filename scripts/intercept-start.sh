@@ -44,7 +44,14 @@ export HTTPS_PROXY="http://127.0.0.1:${PORT}"
 export http_proxy="http://127.0.0.1:${PORT}"
 export https_proxy="http://127.0.0.1:${PORT}"
 
-# Write env vars to a file that session-logger can source
+# Wait briefly for mitmproxy to generate its CA cert
+sleep 2
+MITM_CA="${HOME}/.mitmproxy/mitmproxy-ca-cert.pem"
+if [[ ! -f "$MITM_CA" ]]; then
+  MITM_CA="/root/.mitmproxy/mitmproxy-ca-cert.pem"
+fi
+
+# Write env vars to a file that entrypoint/session-logger can source
 ENV_FILE="/tmp/.clide-proxy-env"
 cat > "$ENV_FILE" << EOF
 export HTTP_PROXY=http://127.0.0.1:${PORT}
@@ -52,6 +59,15 @@ export HTTPS_PROXY=http://127.0.0.1:${PORT}
 export http_proxy=http://127.0.0.1:${PORT}
 export https_proxy=http://127.0.0.1:${PORT}
 EOF
+
+# Node.js needs the mitmproxy CA to trust HTTPS connections
+if [[ -f "$MITM_CA" ]]; then
+  echo "export NODE_EXTRA_CA_CERTS=${MITM_CA}" >> "$ENV_FILE"
+  # Also install system-wide for curl/pip/etc
+  cp "$MITM_CA" /usr/local/share/ca-certificates/mitmproxy.crt 2>/dev/null || true
+  update-ca-certificates 2>/dev/null || true
+  echo "[intercept] Installed mitmproxy CA cert"
+fi
 
 echo "[intercept] Proxy env written to ${ENV_FILE}"
 echo "[intercept] Logs: \${CLIDE_LOG_DIR:-/workspace/.clide/logs}/intercept.jsonl"
