@@ -83,6 +83,16 @@ else
   exit 1
 fi
 
+# Start intercepting proxy if enabled (must run before ttyd so all child processes inherit proxy env)
+if [[ "${CLIDE_INTERCEPT:-0}" == "1" ]]; then
+  /usr/local/bin/intercept-start.sh
+  if [[ -f /tmp/.clide-proxy-env ]]; then
+    # shellcheck disable=SC1091
+    . /tmp/.clide-proxy-env
+    echo "ttyd: proxy env vars set (HTTP_PROXY=${HTTP_PROXY:-})"
+  fi
+fi
+
 # Drop privileges to clide before starting ttyd so the web terminal never runs as root.
 # Note: ttyd logs the credential as base64 in its startup banner. This is only visible
 # via `docker logs` (requires host access). We unset TTYD_PASS from the environment
