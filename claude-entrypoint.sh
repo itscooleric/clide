@@ -149,6 +149,17 @@ fi
 # Web terminal always uses tmux via entrypoint.sh; this covers make shell / ./clide shell.
 # Drop privileges to clide via gosu before exec so the workload never runs as root.
 
+# Start intercepting proxy if enabled (captures all HTTP(S) traffic to JSONL).
+# Must start before the agent so proxy env vars are inherited.
+if [[ "${CLIDE_INTERCEPT:-0}" == "1" ]]; then
+  /usr/local/bin/intercept-start.sh
+  # Source the proxy env vars so the agent uses the proxy
+  if [[ -f /tmp/.clide-proxy-env ]]; then
+    # shellcheck disable=SC1091
+    . /tmp/.clide-proxy-env
+  fi
+fi
+
 # Wrap agent CLIs with session logger for structured logging + transcript capture.
 # Set CLIDE_LOG_DISABLED=1 to skip. Logger is agent-agnostic — works with claude, codex, etc.
 AGENT_CMD="${*:-claude}"

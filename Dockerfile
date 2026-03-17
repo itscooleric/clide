@@ -67,7 +67,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && python3 -m venv /opt/pyenv \
     && /opt/pyenv/bin/pip install --no-cache-dir \
        pytest==9.0.2 \
-       ruff==0.15.5
+       ruff==0.15.5 \
+       mitmproxy==11.1.3
 
 ENV PATH="/home/clide/.local/bin:/opt/pyenv/bin:${PATH}"
 
@@ -92,7 +93,9 @@ COPY scripts/session-logger.sh /usr/local/bin/session-logger.sh
 COPY scripts/notify.sh /usr/local/bin/notify.sh
 COPY scripts/token-cost.py /usr/local/bin/token-cost.py
 COPY scripts/egress-audit.sh /usr/local/bin/egress-audit.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/claude-entrypoint.sh /usr/local/bin/firewall.sh /usr/local/bin/session-logger.sh /usr/local/bin/notify.sh /usr/local/bin/token-cost.py /usr/local/bin/egress-audit.sh
+COPY scripts/intercept-proxy.py /usr/local/bin/intercept-proxy.py
+COPY scripts/intercept-start.sh /usr/local/bin/intercept-start.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/claude-entrypoint.sh /usr/local/bin/firewall.sh /usr/local/bin/session-logger.sh /usr/local/bin/notify.sh /usr/local/bin/token-cost.py /usr/local/bin/egress-audit.sh /usr/local/bin/intercept-start.sh /usr/local/bin/intercept-proxy.py
 
 # Default CLAUDE.md template — seeded into /workspace on first run if none exists
 COPY CLAUDE.md.template /usr/local/share/clide/CLAUDE.md.template
