@@ -29,7 +29,7 @@ CLIDE_TMUX='' /usr/local/bin/claude-entrypoint.sh true
 
 # Mirror the env cleanup from claude-entrypoint.sh — the subprocess call above
 # runs unset in its own shell so it doesn't propagate here. We replicate it so
-# ttyd and all bash sessions it spawns see the same env as `make shell`.
+# ttyd and all bash sessions it spawns see the same env as `make cli`.
 # Keep in sync with the cleanup block in claude-entrypoint.sh.
 if [[ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" && -n "${ANTHROPIC_API_KEY:-}" ]]; then
   echo "ttyd: clearing ANTHROPIC_API_KEY from env (OAuth token takes priority)"

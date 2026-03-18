@@ -146,7 +146,7 @@ elif [[ -n "${GITLAB_TOKEN:-}" ]]; then
 fi
 
 # Opt-in tmux wrapping for shell service (set CLIDE_TMUX=1 in .env)
-# Web terminal always uses tmux via entrypoint.sh; this covers make shell / ./clide shell.
+# Web terminal always uses tmux via entrypoint.sh; this covers make cli / ./clide cli.
 # Drop privileges to clide via gosu before exec so the workload never runs as root.
 
 # Start intercepting proxy if enabled (captures all HTTP(S) traffic to JSONL).
