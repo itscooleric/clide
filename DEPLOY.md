@@ -1,204 +1,175 @@
 # Deployment Guide
 
-## Local Development (IDE)
+## Local Development
 
 ### Quick start
-1. Copy `.env.example` to `.env` and add your `GH_TOKEN`
-2. Run **Build copilot-cli image** task
-3. Run **Start web terminal (ttyd)** task
-4. Open http://localhost:7681 in your browser
+1. Copy `.env.example` to `.env` and add credentials
+2. `docker compose build`
+3. `./clide web` or `make web`
+4. Open http://localhost:7681
 
-### Available tasks
-- **Build copilot-cli image** — build the Docker image
-- **Run copilot (default project)** — run GitHub Copilot CLI
-- **Run GitHub CLI (gh)** — run GitHub CLI with custom args
-- **Run Claude Code** — run Claude Code CLI
-- **Open interactive shell (all CLIs)** — bash with all CLIs available
-- **Start web terminal (ttyd)** — web-based terminal at http://localhost:7681
-- **Stop web terminal** — stop the web terminal service
+### Two services
+
+| Service | What | Command |
+|---------|------|---------|
+| `web` | Browser terminal (ttyd + tmux) | `docker compose up -d web` |
+| `cli` | Headless shell (all CLIs available) | `docker compose run --rm cli` |
+
+All CLIs (claude, copilot, codex, gh, glab) are available from either — just type the command.
 
 ---
 
-## Bernard/Forge Deployment (Caddy Docker Proxy)
+## Server Deployment (Caddy Docker Proxy)
+
+Applies to Bernard, forge-edge, or any host running caddy-docker-proxy.
 
 ### Prerequisites
-- Caddy Docker Proxy running
-- External Docker network `caddy` exists
-- DNS record: `clide.lan.wubi.sh` → Bernard LAN IP
+- Caddy Docker Proxy running on a `caddy` Docker network
+- DNS or Tailscale MagicDNS for the hostname
 
-### Step 1: Create directories
-```bash
-SERVICE="clide"
-sudo mkdir -p "/opt/stacks/$SERVICE"
-sudo mkdir -p "/srv/$SERVICE/projects"
-sudo chown -R "$USER":"$USER" "/opt/stacks/$SERVICE" "/srv/$SERVICE"
-```
-
-### Step 2: Clone/copy files
+### Step 1: Clone and configure
 ```bash
 cd /opt/stacks/clide
-# Copy Dockerfile, docker-compose.yml, and .env here
-```
-
-### Step 3: Configure `.env`
-```bash
-cd /opt/stacks/clide
+git clone https://github.com/itscooleric/clide .
 cp .env.example .env
 nano .env
 ```
 
-Update:
+Required `.env` settings:
 ```env
 GH_TOKEN=your_github_pat_here
-ANTHROPIC_API_KEY=your_anthropic_key_here
+CLAUDE_CODE_OAUTH_TOKEN=your_oauth_token   # or ANTHROPIC_API_KEY
 
-# Keep Claude startup deterministic in containers
-CLAUDE_CODE_SIMPLE=1
+# Auth via Caddy reverse proxy (required for iOS/mobile — see below)
+TTYD_AUTH_PROXY=true
 
-# Optional: Set default project directory
-PROJECT_DIR=/srv/clide/projects/default
-
-# Caddy proxy settings (hostname for labels)
-CADDY_HOSTNAME=clide.lan.wubi.sh
-CADDY_TLS=internal
+# ttyd credentials (used as fallback when NOT behind Caddy)
+TTYD_USER=admin
+TTYD_PASS=changeme
 ```
 
-### Step 3b: Enable Caddy proxy mode
+### Step 2: Create the Caddy override
 ```bash
 cp docker-compose.override.yml.example docker-compose.override.yml
+nano docker-compose.override.yml
 ```
 
-This override file (gitignored) will:
-- Add the `web` service to the `caddy` network
-- Remove port exposure (Caddy proxies directly to container)
+Generate a password hash and update the override:
+```bash
+docker exec caddy caddy hash-password --plaintext 'yourpassword'
+```
 
-### Step 4: Ensure external network exists
+Example override:
+```yaml
+services:
+  web:
+    networks:
+      - default
+      - caddy
+    labels: !override
+      caddy: "http://clide.lan.wubi.sh:80"
+      caddy.basic_auth: "*"
+      caddy.basic_auth.admin: "$$2a$$14$$YOUR_HASH_HERE"
+      caddy.reverse_proxy: "{{upstreams 7681}}"
+      caddy.reverse_proxy.header_up: "X-Auth-User {http.auth.user.id}"
+
+networks:
+  caddy:
+    external: true
+```
+
+> **Important:** Double `$$` in the hash — Docker Compose interpolates `$` signs.
+> Use `!override` on labels to fully replace the base (otherwise base labels merge in).
+
+### Step 3: Ensure caddy network exists
 ```bash
 docker network ls | grep -E '\bcaddy\b' || docker network create caddy
 ```
 
-### Step 5: Build and start
+### Step 4: Build and start
 ```bash
-cd /opt/stacks/clide
 docker compose build
 docker compose up -d web
-docker logs -n 50 clide-web-1
+docker compose logs -f web
 ```
 
-### Step 6: Validate
-From a LAN/VPN client:
+### Step 5: Validate
 ```bash
-curl -Ik https://clide.lan.wubi.sh
-```
+# Without auth — should return 401
+curl -s -o /dev/null -w '%{http_code}' http://clide.lan.wubi.sh/
 
-Should return `200 OK`. Access the web terminal at:
-- **https://clide.lan.wubi.sh**
-
----
-
-## Usage Patterns
-
-### Local development (port mode)
-```bash
-docker compose up -d web
-# Access at http://localhost:7681
-```
-
-### Bernard deployment (proxy mode)
-- Copy `docker-compose.override.yml.example` to `docker-compose.override.yml`
-- Access at `https://clide.lan.wubi.sh`
-- No port exposure needed (override removes it)
-
-### Run CLIs directly (no web UI)
-```bash
-# Interactive shell
-docker compose run --rm shell
-
-# Specific CLI
-docker compose run --rm copilot
-docker compose run --rm gh repo view
-docker compose run --rm claude
-```
-
-To run Claude in full TUI mode (bypass default simple mode):
-```bash
-CLAUDE_CODE_SIMPLE=0 docker compose run --rm claude
-```
-
-### Custom project directory
-```bash
-PROJECT_DIR=/path/to/specific/repo docker compose up -d web
-# Or set PROJECT_DIR in .env
+# With auth — should return 200
+curl -s -o /dev/null -w '%{http_code}' -u admin:yourpassword http://clide.lan.wubi.sh/
 ```
 
 ---
 
 ## Authentication
 
-Two layers of authentication are available. Use either or both.
+### Caddy basic auth (recommended)
+Auth handled by Caddy reverse proxy. **Required for iOS/mobile** — ttyd's built-in
+basic auth is broken on all WebKit browsers (Safari, Chrome on iOS, etc.) due to
+Apple's NSURLSession WebSocket implementation (ttyd upstream #1437).
 
-### ttyd basic auth (built-in)
-Protects the web terminal directly. Works in both local and proxy mode.
+Setup: see [Server Deployment](#server-deployment-caddy-docker-proxy) above.
 
-Add to `.env`:
+### ttyd basic auth (fallback)
+Built-in auth for local/desktop use without Caddy. Add to `.env`:
 ```env
 TTYD_USER=admin
 TTYD_PASS=changeme
 ```
 
-The browser will prompt for credentials before opening the terminal. If unset, ttyd runs without auth (a warning is printed on startup).
+> **Warning:** Broken on iOS/Safari. Use Caddy auth proxy for mobile access.
 
-### Caddy basicauth (proxy layer)
-Protects the web terminal at the reverse proxy level. Only applies in Caddy proxy mode.
+### No auth
+Only safe behind VPN/firewall:
+```env
+TTYD_NO_AUTH=true
+```
 
-1. Generate a bcrypt password hash:
-   ```bash
-   docker run --rm caddy:latest caddy hash-password --plaintext 'yourpassword'
-   ```
+---
 
-2. Add to `.env`:
-   ```env
-   CADDY_BASICAUTH_USER=admin
-   CADDY_BASICAUTH_HASH=$2a$14$xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-   ```
+## Usage
 
-3. In `docker-compose.override.yml`, uncomment the `labels` block with the `caddy.basicauth` entries.
+```bash
+# Web terminal
+./clide web           # or: make web, docker compose up -d web
 
-Both auth methods are configured via `.env` (gitignored) so credentials are never committed.
+# Headless shell
+./clide cli           # or: make cli, docker compose run --rm cli
+
+# Custom project directory
+PROJECT_DIR=/path/to/repo docker compose up -d web
+```
 
 ---
 
 ## Troubleshooting
 
 ### 502 Bad Gateway from Caddy
-**Most common causes:**
-1. Wrong port in reverse_proxy (should be 7681)
-2. Container not on `caddy` network (check that `docker-compose.override.yml` exists)
-3. ttyd not listening (check logs)
+1. Container not on `caddy` network — check `docker-compose.override.yml`
+2. ttyd not listening — check `docker compose logs web`
+3. Wrong port — reverse_proxy should target 7681
 
-**Quick checks:**
 ```bash
 docker inspect clide-web-1 --format '{{json .NetworkSettings.Networks}}'
-docker logs -n 100 clide-web-1
-docker exec -it clide-web-1 ss -tulpn | grep 7681
+docker compose logs web | tail -20
 ```
 
-### ttyd works locally but not via hostname
-- Verify DNS: `clide.lan.wubi.sh` resolves to Bernard IP
-- Check Caddy logs: `docker logs caddy-proxy`
-- Verify labels: `docker inspect clide-web-1 --format '{{json .Config.Labels}}'`
+### 407 Proxy Authentication Required (direct port access)
+Expected when `TTYD_AUTH_PROXY=true` — ttyd requires the `X-Auth-User` header
+that only Caddy provides. Access through Caddy instead of the direct port.
+
+### "Press Enter to Reconnect" on mobile
+You're hitting ttyd directly (port 7681) instead of through Caddy.
+Use the Caddy URL (e.g. `http://clide.lan.wubi.sh`).
 
 ### Claude keeps showing first-run setup prompts
-Rebuild and reset service state:
 ```bash
 docker compose down -v
 docker compose build --no-cache
-docker compose run --rm claude
-```
-
-### Permission errors on project directory
-```bash
-sudo chown -R $USER:$USER /srv/clide/projects
+docker compose up -d web
 ```
 
 ---
@@ -207,8 +178,7 @@ sudo chown -R $USER:$USER /srv/clide/projects
 
 **What to backup:**
 - `/opt/stacks/clide/.env` — tokens and config
-- `/opt/stacks/clide/docker-compose.yml` — service definition
-- `/srv/clide/projects/` — your project files (if stored here)
+- `/opt/stacks/clide/docker-compose.override.yml` — Caddy labels + host-specific config
 
 **Restore:**
 1. Restore files to same paths
@@ -218,9 +188,8 @@ sudo chown -R $USER:$USER /srv/clide/projects
 
 ## Security Notes
 
-- Default setup is **LAN/VPN-only** (`*.lan.wubi.sh`)
-- ttyd has `--writable` enabled (allows file editing in terminal)
-- **Enable authentication** (see [Authentication](#authentication)) — ttyd basic auth and/or Caddy basicauth
-- GitHub tokens are passed via environment variables (secure for Docker)
-- Web terminal has full access to all CLIs and mounted projects
-- All auth credentials are stored in `.env` (gitignored)
+- Default setup is **LAN/VPN-only**
+- ttyd has `--writable` enabled (allows terminal input)
+- **Always enable authentication** — Caddy basic auth (mobile-compatible) or ttyd basic auth (desktop only)
+- Credentials stored in `.env` and `docker-compose.override.yml` (both gitignored)
+- Egress firewall restricts outbound traffic to allowlisted API endpoints

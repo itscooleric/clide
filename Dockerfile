@@ -11,6 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gnupg \
     gosu \
     iptables \
+    openssh-client \
+    rsync \
     tmux \
     && rm -rf /var/lib/apt/lists/*
 
@@ -39,10 +41,6 @@ RUN ARCH="$(uname -m)" \
        -o /usr/local/bin/ttyd \
     && chmod +x /usr/local/bin/ttyd
 
-# Install Claude Code CLI (pinned — bump ARG to upgrade)
-ARG CLAUDE_CODE_VERSION=2.1.71
-RUN npm install -g "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}"
-
 # Install Codex CLI (pinned — bump ARG to upgrade)
 # hadolint ignore=DL3059
 ARG CODEX_VERSION=0.112.0
@@ -69,16 +67,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && python3 -m venv /opt/pyenv \
     && /opt/pyenv/bin/pip install --no-cache-dir \
        pytest==9.0.2 \
-       ruff==0.15.5
+       ruff==0.15.5 \
+       mitmproxy==11.1.3
 
-ENV PATH="/opt/pyenv/bin:${PATH}"
+ENV PATH="/home/clide/.local/bin:/opt/pyenv/bin:${PATH}"
 
 # Create unprivileged user and set up workspace
-# UID/GID default to 1000 (standard first non-root user on Linux/macOS).
-# Override at build time:  CLIDE_UID=$(id -u) CLIDE_GID=$(id -g) docker compose build
-ARG CLIDE_UID=1000
-ARG CLIDE_GID=1000
-RUN groupadd -g "${CLIDE_GID}" clide \
+# UID/GID default to 1100 to avoid conflicts with common host groups
+# (GID 1000 is often 'docker' on Ubuntu). Override in .env or at build time:
+#   CLIDE_UID=$(id -u) CLIDE_GID=$(id -g) docker compose build
+ARG CLIDE_UID=1100
+ARG CLIDE_GID=1100
+RUN groupadd -g "${CLIDE_GID}" clide 2>/dev/null || groupmod -n clide "$(getent group "${CLIDE_GID}" | cut -d: -f1)" \
     && useradd -m -l -s /bin/bash -u "${CLIDE_UID}" -g clide clide \
     && mkdir -p /workspace \
     && chown clide:clide /workspace \
@@ -89,7 +89,13 @@ RUN groupadd -g "${CLIDE_GID}" clide \
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY claude-entrypoint.sh /usr/local/bin/claude-entrypoint.sh
 COPY firewall.sh /usr/local/bin/firewall.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/claude-entrypoint.sh /usr/local/bin/firewall.sh
+COPY scripts/session-logger.sh /usr/local/bin/session-logger.sh
+COPY scripts/notify.sh /usr/local/bin/notify.sh
+COPY scripts/token-cost.py /usr/local/bin/token-cost.py
+COPY scripts/egress-audit.sh /usr/local/bin/egress-audit.sh
+COPY scripts/intercept-proxy.py /usr/local/bin/intercept-proxy.py
+COPY scripts/intercept-start.sh /usr/local/bin/intercept-start.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/claude-entrypoint.sh /usr/local/bin/firewall.sh /usr/local/bin/session-logger.sh /usr/local/bin/notify.sh /usr/local/bin/token-cost.py /usr/local/bin/egress-audit.sh /usr/local/bin/intercept-start.sh /usr/local/bin/intercept-proxy.py
 
 # Default CLAUDE.md template — seeded into /workspace on first run if none exists
 COPY CLAUDE.md.template /usr/local/share/clide/CLAUDE.md.template
@@ -97,8 +103,15 @@ COPY CLAUDE.md.template /usr/local/share/clide/CLAUDE.md.template
 # tmux config — mouse support, sane splits, 256-colour
 COPY --chown=clide:clide .tmux.conf /home/clide/.tmux.conf
 
+# Shell config — wraps agent CLIs through session-logger automatically
+COPY --chown=clide:clide .bashrc /home/clide/.bashrc
+
 # Switch to unprivileged user for user-scoped installs
 USER clide
+
+# Install Claude Code CLI via native installer (self-updating, no npm dependency).
+# Installs to ~/.local/bin/claude — auto-updates at runtime without sudo.
+RUN curl -fsSL https://claude.ai/install.sh | bash
 
 # Trust all directories for git operations.
 # Clide is a single-user dev sandbox — volume-mounted repos from the host
@@ -127,6 +140,10 @@ WORKDIR /workspace
 # Port is validated as numeric to prevent injection; base path is respected.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD sh -c 'PORT="${TTYD_PORT:-7681}"; case "$PORT" in (""|*[!0-9]*) PORT=7681 ;; esac; curl -f "http://localhost:${PORT}${TTYD_BASE_PATH:-/}" || exit 1'
+
+# Bake version info into image (set at build time by docker-compose / Makefile)
+ARG BUILD_VERSION=dev
+RUN echo "${BUILD_VERSION}" > /etc/clide-version
 
 # Default to bash shell (can be overridden by command in docker-compose)
 CMD ["/bin/bash"]

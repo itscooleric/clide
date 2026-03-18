@@ -8,7 +8,7 @@
   ██      ██      ██ ██   ██ ██
    ██████ ███████ ██ ██████  ███████
 
-  sandboxed agentic terminal        v3
+  sandboxed agentic terminal        v4
   ──────────────────────────────────────
 
   your project ──bind mount──► /workspace
@@ -84,12 +84,8 @@ ANTHROPIC_API_KEY=sk-ant-xxxxx
 
 ### Claude startup behavior
 
-- `make claude` and `./clide claude` force `CLAUDE_CODE_SIMPLE=1` for predictable container startup.
-- The `claude` and `shell` services share a container entrypoint (`/usr/local/bin/claude-entrypoint.sh`) that pre-seeds Claude config to avoid repeated first-run setup prompts — so running `claude` from inside `make shell` works too.
-- If you prefer full TUI mode, run compose directly with an override:
-   ```bash
-   CLAUDE_CODE_SIMPLE=0 docker compose run --rm claude
-   ```
+- The container entrypoint (`/usr/local/bin/claude-entrypoint.sh`) pre-seeds Claude config to avoid repeated first-run setup prompts. Just type `claude` from any shell.
+- `CLAUDE_CODE_SIMPLE=1` is set by default for predictable container startup. Override in `.env` if you prefer the full TUI.
 
 ### Codex CLI (OpenAI) authentication
 
@@ -113,9 +109,9 @@ codex auth login --auth device
 
 ### tmux — multi-pane workflows
 
-`tmux` is installed in the container and enabled by default in the **web terminal**. Every browser tab attaches to the same named session (`main`), so refreshing the page re-attaches rather than spawning a fresh shell.
+`tmux` is installed in the container and enabled by default in the **web terminal**. Every browser tab attaches to the same named session (`main`), so refreshing the page re-attaches rather than spawning a fresh shell. The web terminal auto-reconnects after network drops (enabled by default; set `TTYD_RECONNECT=0` to disable). The WebSocket ping interval (`TTYD_PING_INTERVAL`, default 30s) is tuned for mobile browsers that may pause connections during tab switches or screen lock.
 
-For `make shell` / `./clide shell`, tmux is **opt-in** to avoid breaking existing workflows:
+For `make cli` / `./clide cli`, tmux is **opt-in** to avoid breaking existing workflows:
 ```env
 # .env
 CLIDE_TMUX=1
@@ -130,6 +126,7 @@ CLIDE_TMUX=1
 | `Ctrl-b <arrow>` | Move between panes |
 | `Ctrl-b d` | Detach (session stays alive) |
 | `Ctrl-b r` | Reload tmux config |
+| `F12` | Toggle mouse mode on/off (useful for mobile) |
 | Mouse | Click to focus, scroll to scroll, drag to resize |
 
 ## Setup
@@ -165,46 +162,78 @@ CLIDE_TMUX=1
 ### Wrapper script (easiest)
 ```bash
 ./clide web       # start web terminal at http://localhost:7681
-./clide shell     # interactive shell with all CLIs
-./clide copilot   # run GitHub Copilot CLI
-./clide claude    # run Claude Code CLI
-./clide codex     # run Codex CLI (OpenAI)
-./clide gh repo view  # run GitHub CLI with args
+./clide cli       # interactive shell — run claude, copilot, codex, gh from here
 ./clide help      # show all commands
 ```
 
 ### Make
 ```bash
 make web          # start web terminal
-make shell        # interactive shell
-make copilot      # run copilot
-make claude       # run Claude Code CLI
-make codex        # run Codex CLI (OpenAI)
+make cli          # interactive shell
 make help         # show all targets
 ```
 
-### VS Code tasks
-Use `Ctrl+Shift+P` → **Run Task**:
-- **Start web terminal (ttyd)** → access all CLIs at http://localhost:7681
-- **Run copilot (default project)** → run Copilot CLI directly
-- **Open interactive shell (all CLIs)** → bash with all CLIs available
-
 ### Docker Compose directly
 ```bash
-docker compose run --rm shell
-docker compose run --rm copilot
-docker compose up -d web
+docker compose up -d web            # web terminal
+docker compose run --rm cli         # headless shell
 ```
 
 Run against a different project:
 ```bash
-PROJECT_DIR=/path/to/specific/repo docker compose run --rm shell
+PROJECT_DIR=/path/to/specific/repo docker compose run --rm cli
 ```
 
 Your project is mounted at `/workspace` inside the container.
 
 ### Bernard/Forge deployment
 See [`DEPLOY.md`](./DEPLOY.md) for Caddy Docker Proxy integration. Uses `docker-compose.override.yml` (gitignored) for reverse proxy config that persists across git pulls.
+
+## Session logging
+
+Every agent session is automatically logged with structured events and a raw terminal transcript. Typing `claude`, `codex`, or `copilot` in any shell goes through `session-logger.sh` automatically.
+
+```text
+/workspace/.clide/logs/<session_id>/
+  events.jsonl        — structured JSONL events (start, end, errors)
+  transcript.txt.gz   — compressed raw terminal I/O
+```
+
+All logged output is scrubbed for secrets (API keys, tokens, passwords) before writing. See [`docs/schema/session-events-v1.md`](./docs/schema/session-events-v1.md) for the event format.
+
+| Env var | Default | Description |
+|---------|---------|-------------|
+| `CLIDE_LOG_DISABLED` | _(empty)_ | Set to `1` to disable logging |
+| `CLIDE_MAX_SESSIONS` | `30` | Max sessions retained (oldest pruned on new session) |
+
+## Push notifications (ntfy)
+
+Get notified when agent sessions start, end, or error. Works with any [ntfy](https://ntfy.sh) instance (self-hosted or public).
+
+```env
+# .env
+CLIDE_NTFY_URL=https://ntfy.example.com
+CLIDE_NTFY_TOPIC=clide
+```
+
+Subscribe to notifications on your phone via the ntfy app, or open `https://ntfy.example.com/clide` in a browser tab.
+
+| Env var | Default | Description |
+|---------|---------|-------------|
+| `CLIDE_NTFY_URL` | _(empty)_ | ntfy server URL (notifications disabled if unset) |
+| `CLIDE_NTFY_TOPIC` | `clide` | ntfy topic name |
+| `CLIDE_NTFY_DISABLED` | _(empty)_ | Set to `1` to disable notifications |
+
+## LAN CA certificate
+
+If your internal services use TLS with a private CA (e.g. Caddy internal certs), the container can trust it at startup:
+
+```env
+# .env
+CLIDE_CA_URL=https://fs.example.com/root-ca.crt
+```
+
+The cert is downloaded and installed on each container start. If the download fails, startup continues without it.
 
 ## Additional docs
 
@@ -213,6 +242,7 @@ See [`DEPLOY.md`](./DEPLOY.md) for Caddy Docker Proxy integration. Uses `docker-
 | [`SECURITY.md`](./SECURITY.md) | Threat model, trust boundaries, attack surface, hardening recommendations |
 | [`RUNBOOK.md`](./RUNBOOK.md) | Operational runbook — health checks, logs, rebuilds, credential rotation, troubleshooting |
 | [`DEPLOY.md`](./DEPLOY.md) | Production deployment with Caddy reverse proxy |
+| [`docs/schema/session-events-v1.md`](./docs/schema/session-events-v1.md) | Session event JSONL schema |
 
 ## Notes
 
@@ -227,7 +257,7 @@ See [`DEPLOY.md`](./DEPLOY.md) for Caddy Docker Proxy integration. Uses `docker-
    ```bash
    docker compose down -v
    docker compose build --no-cache
-   make claude
+   make cli
    ```
 
 ## Compatibility

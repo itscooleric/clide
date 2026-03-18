@@ -60,10 +60,9 @@ make logs
 docker compose logs -f web
 ```
 
-### View logs for a specific service
+### View logs for CLI sessions
 ```bash
-docker compose logs -f shell
-docker compose logs -f claude
+docker compose logs -f cli
 ```
 
 ### View recent logs without following
@@ -179,7 +178,7 @@ The entrypoint pre-seeds `~/.claude.json` to suppress first-run prompts. If they
 ```bash
 docker compose down -v
 docker compose build --no-cache
-make claude
+make cli
 ```
 
 ---
@@ -187,9 +186,9 @@ make claude
 ## Running against a different project
 
 ```bash
-PROJECT_DIR=/path/to/your/repo make shell
+PROJECT_DIR=/path/to/your/repo make cli
 # or
-PROJECT_DIR=/path/to/your/repo docker compose run --rm shell
+PROJECT_DIR=/path/to/your/repo docker compose run --rm cli
 ```
 
 ---

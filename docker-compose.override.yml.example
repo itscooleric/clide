@@ -1,23 +1,31 @@
-# Docker Compose override for Caddy Docker Proxy mode
-# This file is gitignored - safe for local customization
+# Docker Compose override — Caddy reverse proxy with basic auth
 #
-# Usage:
-#   1. Copy this file to docker-compose.override.yml
-#   2. Docker Compose will automatically merge it with docker-compose.yml
-#   3. Customize as needed for your deployment
+# Why: ttyd's built-in basic auth (--credential) is broken on iOS/Safari
+# due to Apple's WebSocket implementation. Caddy handles auth instead.
 #
-# Generate a bcrypt hash for your password:
-#   docker run --rm caddy:latest caddy hash-password --plaintext 'yourpassword'
+# Setup:
+#   1. Copy to docker-compose.override.yml
+#   2. Generate password hash:
+#        docker exec caddy caddy hash-password --plaintext 'yourpassword'
+#   3. Replace the hash below (double $$ for compose escaping)
+#   4. Set TTYD_AUTH_PROXY=true in .env
+#   5. docker compose up -d web
+#
+# Requires: caddy-docker-proxy running on a 'caddy' Docker network
+#   See: https://github.com/lucaslorentz/caddy-docker-proxy
 
 services:
   web:
     networks:
+      - default
       - caddy
-    ports: []  # Remove port exposure when using Caddy proxy
-    # Uncomment labels below to enable Caddy basicauth
-    # labels:
-    #   caddy: ${CADDY_HOSTNAME:-clide.lan.wubi.sh}
-    #   caddy.tls: ${CADDY_TLS:-internal}
-    #   caddy.reverse_proxy: "{{upstreams 7681}}"
-    #   caddy.basicauth: /*
-    #   caddy.basicauth.${CADDY_BASICAUTH_USER:-admin}: ${CADDY_BASICAUTH_HASH}
+    labels: !override
+      caddy: "http://your-hostname:80"
+      caddy.basic_auth: "*"
+      caddy.basic_auth.admin: "$$2a$$14$$YOUR_HASH_HERE"
+      caddy.reverse_proxy: "{{upstreams 7681}}"
+      caddy.reverse_proxy.header_up: "X-Auth-User {http.auth.user.id}"
+
+networks:
+  caddy:
+    external: true
