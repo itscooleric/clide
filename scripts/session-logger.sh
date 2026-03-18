@@ -41,14 +41,12 @@ fi
 # ── ULID-ish session ID ──────────────────────────────────────────
 
 generate_session_id() {
-  # Timestamp prefix (ms since epoch in base36) + random suffix
-  local ts
-  ts=$(python3 -c "import time,string; t=int(time.time()*1000); chars=string.digits+string.ascii_lowercase; r='';
-while t>0: r=chars[t%36]+r; t//=36
-print(r)" 2>/dev/null || date +%s)
+  # Human-readable datetime prefix + random suffix for uniqueness
+  local dt
+  dt=$(date -u +"%Y%m%d-%H%M%S")
   local rand
   rand=$(head -c 6 /dev/urandom | od -An -tx1 | tr -d ' \n' | head -c 8)
-  echo "clide-${ts}-${rand}"
+  echo "clide-${dt}-${rand}"
 }
 
 SESSION_ID=$(generate_session_id)
@@ -57,6 +55,9 @@ EVENTS_FILE="${SESSION_DIR}/events.jsonl"
 RAW_TRANSCRIPT="${SESSION_DIR}/transcript.raw"
 
 mkdir -p "${SESSION_DIR}"
+
+# Export session dir so intercept-proxy and egress-audit can write per-session logs
+export CLIDE_SESSION_DIR="${SESSION_DIR}"
 
 # ── Secret scrubbing ─────────────────────────────────────────────
 

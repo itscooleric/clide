@@ -69,5 +69,10 @@ if [[ -f "$MITM_CA" ]]; then
   echo "[intercept] Installed mitmproxy CA cert"
 fi
 
+# Pass session dir through so intercept-proxy.py writes per-session logs
+if [[ -n "${CLIDE_SESSION_DIR:-}" ]]; then
+  echo "export CLIDE_SESSION_DIR=${CLIDE_SESSION_DIR}" >> "$ENV_FILE"
+fi
+
 echo "[intercept] Proxy env written to ${ENV_FILE}"
-echo "[intercept] Logs: \${CLIDE_LOG_DIR:-/workspace/.clide/logs}/intercept.jsonl"
+echo "[intercept] Logs: ${CLIDE_SESSION_DIR:-\${CLIDE_LOG_DIR:-/workspace/.clide/logs}}/intercept.jsonl"

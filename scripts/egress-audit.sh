@@ -18,7 +18,8 @@ if [[ "${CLIDE_EGRESS_AUDIT:-0}" != "1" ]]; then
   exit 0
 fi
 
-LOG_DIR="${CLIDE_LOG_DIR:-/workspace/.clide/logs}"
+# Prefer per-session dir if available, fall back to global log dir
+LOG_DIR="${CLIDE_SESSION_DIR:-${CLIDE_LOG_DIR:-/workspace/.clide/logs}}"
 LOG_FILE="${LOG_DIR}/egress.jsonl"
 INTERVAL="${CLIDE_EGRESS_INTERVAL:-5}"
 SEEN_FILE="/tmp/.egress-seen"

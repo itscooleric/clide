@@ -23,7 +23,9 @@ from pathlib import Path
 from mitmproxy import http
 
 
-LOG_DIR = os.environ.get("CLIDE_LOG_DIR", "/workspace/.clide/logs")
+# Prefer per-session dir if available, fall back to global log dir
+_SESSION_DIR = os.environ.get("CLIDE_SESSION_DIR", "")
+LOG_DIR = _SESSION_DIR or os.environ.get("CLIDE_LOG_DIR", "/workspace/.clide/logs")
 LOG_FILE = Path(LOG_DIR) / "intercept.jsonl"
 CAPTURE_BODIES = os.environ.get("CLIDE_INTERCEPT_BODIES", "0") == "1"
 

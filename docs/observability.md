@@ -20,14 +20,19 @@ Every agent session produces:
 .clide/logs/<session_id>/
   events.jsonl         — session lifecycle events (start, end)
   conversation.jsonl   — Claude Code's native conversation log
+  intercept.jsonl      — HTTP(S) intercept log (if CLIDE_INTERCEPT=1)
+  egress.jsonl         — outbound connection log (if CLIDE_EGRESS_AUDIT=1)
 ```
+
+Session IDs use a human-readable datetime format: `clide-20260318-143022-d85a5cd0`
+(UTC date-time + random suffix for uniqueness).
 
 ### session_start event
 ```json
 {
   "event": "session_start",
   "ts": "2026-03-16T05:01:00.000Z",
-  "session_id": "clide-mmspur4f-5ad2ed48",
+  "session_id": "clide-20260316-050100-5ad2ed48",
   "agent": "claude",
   "repo": "itscooleric/clide",
   "model": "claude-sonnet-4-20250514",
@@ -40,7 +45,7 @@ Every agent session produces:
 {
   "event": "session_end",
   "ts": "2026-03-16T05:11:00.000Z",
-  "session_id": "clide-mmspur4f-5ad2ed48",
+  "session_id": "clide-20260316-050100-5ad2ed48",
   "agent": "claude",
   "exit_code": 0,
   "outcome": "success",
