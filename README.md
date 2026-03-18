@@ -84,12 +84,8 @@ ANTHROPIC_API_KEY=sk-ant-xxxxx
 
 ### Claude startup behavior
 
-- `make claude` and `./clide claude` force `CLAUDE_CODE_SIMPLE=1` for predictable container startup.
-- The `claude` and `shell` services share a container entrypoint (`/usr/local/bin/claude-entrypoint.sh`) that pre-seeds Claude config to avoid repeated first-run setup prompts — so running `claude` from inside `make shell` works too.
-- If you prefer full TUI mode, run compose directly with an override:
-   ```bash
-   CLAUDE_CODE_SIMPLE=0 docker compose run --rm claude
-   ```
+- The container entrypoint (`/usr/local/bin/claude-entrypoint.sh`) pre-seeds Claude config to avoid repeated first-run setup prompts. Just type `claude` from any shell.
+- `CLAUDE_CODE_SIMPLE=1` is set by default for predictable container startup. Override in `.env` if you prefer the full TUI.
 
 ### Codex CLI (OpenAI) authentication
 
@@ -115,7 +111,7 @@ codex auth login --auth device
 
 `tmux` is installed in the container and enabled by default in the **web terminal**. Every browser tab attaches to the same named session (`main`), so refreshing the page re-attaches rather than spawning a fresh shell. The web terminal auto-reconnects after network drops (enabled by default; set `TTYD_RECONNECT=0` to disable). The WebSocket ping interval (`TTYD_PING_INTERVAL`, default 30s) is tuned for mobile browsers that may pause connections during tab switches or screen lock.
 
-For `make shell` / `./clide shell`, tmux is **opt-in** to avoid breaking existing workflows:
+For `make cli` / `./clide cli`, tmux is **opt-in** to avoid breaking existing workflows:
 ```env
 # .env
 CLIDE_TMUX=1
@@ -166,40 +162,26 @@ CLIDE_TMUX=1
 ### Wrapper script (easiest)
 ```bash
 ./clide web       # start web terminal at http://localhost:7681
-./clide shell     # interactive shell with all CLIs
-./clide copilot   # run GitHub Copilot CLI
-./clide claude    # run Claude Code CLI
-./clide codex     # run Codex CLI (OpenAI)
-./clide gh repo view  # run GitHub CLI with args
+./clide cli       # interactive shell — run claude, copilot, codex, gh from here
 ./clide help      # show all commands
 ```
 
 ### Make
 ```bash
 make web          # start web terminal
-make shell        # interactive shell
-make copilot      # run copilot
-make claude       # run Claude Code CLI
-make codex        # run Codex CLI (OpenAI)
+make cli          # interactive shell
 make help         # show all targets
 ```
 
-### VS Code tasks
-Use `Ctrl+Shift+P` → **Run Task**:
-- **Start web terminal (ttyd)** → access all CLIs at http://localhost:7681
-- **Run copilot (default project)** → run Copilot CLI directly
-- **Open interactive shell (all CLIs)** → bash with all CLIs available
-
 ### Docker Compose directly
 ```bash
-docker compose run --rm shell
-docker compose run --rm copilot
-docker compose up -d web
+docker compose up -d web            # web terminal
+docker compose run --rm cli         # headless shell
 ```
 
 Run against a different project:
 ```bash
-PROJECT_DIR=/path/to/specific/repo docker compose run --rm shell
+PROJECT_DIR=/path/to/specific/repo docker compose run --rm cli
 ```
 
 Your project is mounted at `/workspace` inside the container.
@@ -275,7 +257,7 @@ The cert is downloaded and installed on each container start. If the download fa
    ```bash
    docker compose down -v
    docker compose build --no-cache
-   make claude
+   make cli
    ```
 
 ## Compatibility

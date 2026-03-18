@@ -2,152 +2,35 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Build copilot-cli image",
+      "label": "Build clide image",
       "type": "shell",
       "command": "docker compose build",
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
+      "options": { "cwd": "${workspaceFolder}" },
       "group": "build",
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared"
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Rebuild copilot-cli image (no cache)",
-      "type": "shell",
-      "command": "docker compose build --no-cache",
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "group": "build",
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared"
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Run copilot (default project)",
-      "type": "shell",
-      "command": "docker compose run --rm copilot",
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "group": {
-        "kind": "test",
-        "isDefault": true
-      },
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "focus": true
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Run copilot (custom project dir)",
-      "type": "shell",
-      "command": "PROJECT_DIR=${input:projectDir} docker compose run --rm copilot",
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "group": "test",
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "focus": true
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Run GitHub CLI (gh)",
-      "type": "shell",
-      "command": "docker compose run --rm gh ${input:ghArgs}",
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "group": "test",
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "focus": true
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Run Claude Code",
-      "type": "shell",
-      "command": "docker compose run --rm claude",
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "group": "test",
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "focus": true
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Open interactive shell (all CLIs)",
-      "type": "shell",
-      "command": "docker compose run --rm shell",
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "group": "test",
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "focus": true
-      },
       "problemMatcher": []
     },
     {
       "label": "Start web terminal (ttyd)",
       "type": "shell",
-      "command": "docker compose up -d web && echo 'Web terminal available at http://localhost:7681'",
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "group": "test",
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared"
-      },
+      "command": "docker compose up -d web && echo 'Web terminal at http://localhost:7681'",
+      "options": { "cwd": "${workspaceFolder}" },
+      "group": { "kind": "test", "isDefault": true },
       "problemMatcher": []
     },
     {
       "label": "Stop web terminal",
       "type": "shell",
-      "command": "docker compose down web",
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "group": "test",
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared"
-      },
+      "command": "docker compose down",
+      "options": { "cwd": "${workspaceFolder}" },
       "problemMatcher": []
-    }
-  ],
-  "inputs": [
-    {
-      "id": "projectDir",
-      "type": "promptString",
-      "description": "Absolute path to the project to run Copilot against",
-      "default": "${workspaceFolder}/../teddy"
     },
     {
-      "id": "ghArgs",
-      "type": "promptString",
-      "description": "Arguments to pass to gh (e.g. repo view, pr list)",
-      "default": "--help"
+      "label": "Open CLI shell",
+      "type": "shell",
+      "command": "docker compose run --rm cli",
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": { "reveal": "always", "panel": "dedicated", "focus": true },
+      "problemMatcher": []
     }
   ]
 }

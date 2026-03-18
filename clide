@@ -12,11 +12,7 @@ Usage: ./clide <command> [args]
 Commands:
   web         Start web terminal at http://localhost:7681
   web-stop    Stop the web terminal
-  shell       Open interactive shell (all CLIs available)
-  copilot     Run GitHub Copilot CLI
-  gh [args]   Run GitHub CLI (pass args after)
-  claude      Run Claude Code CLI
-  codex [args] Run Codex CLI (OpenAI; pass args after)
+  cli         Open interactive shell (all CLIs available)
   build       Build the Docker image
   rebuild     Rebuild the Docker image (no cache)
   logs        Follow web terminal logs
@@ -25,9 +21,7 @@ Commands:
 
 Examples:
   ./clide web                    # start web terminal
-  ./clide shell                  # interactive shell
-  ./clide copilot                # run copilot
-  ./clide gh repo view           # run gh with args
+  ./clide cli                    # interactive shell — run claude, copilot, codex, gh from here
   PROJECT_DIR=~/myrepo ./clide shell  # mount a specific project
   ./clide codex                  # run Codex CLI (OpenAI)
   ./clide codex auth login --auth device
@@ -76,26 +70,9 @@ case "${1:-help}" in
   web-stop)
     docker compose down
     ;;
-  shell)
+  cli|shell)
     splash
-    docker compose run --rm shell
-    ;;
-  copilot)
-    splash
-    docker compose run --rm copilot
-    ;;
-  gh)
-    shift
-    docker compose run --rm gh "$@"
-    ;;
-  claude)
-    splash
-    CLAUDE_CODE_SIMPLE=1 docker compose run --rm claude
-    ;;
-  codex)
-    shift
-    splash
-    docker compose run --rm codex "$@"
+    docker compose run --rm cli
     ;;
   build)
     docker compose build

@@ -63,46 +63,22 @@ x-base: &base
   tty: true
 
 services:
-  # Web terminal (ttyd) - access all CLIs via browser
+  # Web terminal (ttyd) — browser-based shell with all CLIs
   web:
     <<: *base
     entrypoint: ["/usr/local/bin/entrypoint.sh"]
     command: []
     ports:
       - "${CLIDE_BIND:-0.0.0.0}:${TTYD_PORT:-7681}:7681"
-    # To use Caddy reverse proxy (recommended for iOS/mobile — see docs/observability.md):
-    #   Add caddy network + labels in docker-compose.override.yml
+    # To use Caddy reverse proxy (recommended for iOS/mobile):
+    #   See docker-compose.override.yml.example
     #   Set TTYD_AUTH_PROXY=true in .env
 
-  # Interactive shell — all three CLIs available (claude config pre-seeded)
-  shell:
+  # Headless shell — same image, all CLIs available, no web terminal
+  cli:
     <<: *base
     entrypoint: ["/usr/local/bin/claude-entrypoint.sh"]
     command: ["/bin/bash"]
-
-  # GitHub Copilot CLI
-  copilot:
-    <<: *base
-    entrypoint: ["/usr/local/bin/firewall.sh"]
-    command: ["copilot"]
-
-  # GitHub CLI
-  gh:
-    <<: *base
-    entrypoint: ["/usr/local/bin/firewall.sh"]
-    command: ["gh"]
-
-  # Claude Code CLI
-  claude:
-    <<: *base
-    entrypoint: ["/usr/local/bin/claude-entrypoint.sh"]
-    command: []
-
-  # Codex CLI (OpenAI)
-  codex:
-    <<: *base
-    entrypoint: ["/usr/local/bin/firewall.sh"]
-    command: ["codex"]
 
 # Persistent state is stored in /workspace/.clide/ (within the bind-mounted
 # project directory) — no named volumes needed. This avoids Docker's
