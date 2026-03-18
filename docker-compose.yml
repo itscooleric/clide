@@ -62,11 +62,6 @@ x-base: &base
   stdin_open: true
   tty: true
 
-networks:
-  caddy:
-    external: true
-    # Only used when service explicitly joins it
-
 services:
   # Web terminal (ttyd) - access all CLIs via browser
   web:
@@ -75,20 +70,9 @@ services:
     command: []
     ports:
       - "${CLIDE_BIND:-0.0.0.0}:${TTYD_PORT:-7681}:7681"
-    networks:
-      - default
-      - caddy
-    labels:
-      # Caddy Docker Proxy labels (only active if on caddy network)
-      caddy: ${CADDY_HOSTNAME:-clide.lan.wubi.sh}
-      caddy.tls: ${CADDY_TLS:-internal}
-      caddy.reverse_proxy: "{{upstreams 7681}}"
-      caddy.reverse_proxy.header_up: "X-Auth-User {http.auth.user.id}"
-      # To add Caddy basic auth (fixes iOS/Safari WebSocket bug), add to override:
-      #   caddy.basic_auth: "*"
-      #   caddy.basic_auth.USER: "$$2a$$14$$HASH..."  (double $$ for compose escaping)
-      # Generate hash: docker exec caddy caddy hash-password --plaintext <pass>
-      # Also set TTYD_AUTH_PROXY=true in .env
+    # To use Caddy reverse proxy (recommended for iOS/mobile — see docs/observability.md):
+    #   Add caddy network + labels in docker-compose.override.yml
+    #   Set TTYD_AUTH_PROXY=true in .env
 
   # Interactive shell — all three CLIs available (claude config pre-seeded)
   shell:
