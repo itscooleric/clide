@@ -76,14 +76,22 @@ else
   echo "ttyd: glab not configured (GITLAB_TOKEN not set — set in .env to enable)"
 fi
 
-# Auth precedence: credentials take priority; TTYD_NO_AUTH=true is the explicit opt-out.
-# Setting both TTYD_NO_AUTH=true and credentials is a configuration error.
-if [[ "${TTYD_NO_AUTH:-}" == "true" && -n "${TTYD_USER:-}" && -n "${TTYD_PASS:-}" ]]; then
+# Auth modes (in priority order):
+#   1. TTYD_AUTH_PROXY=true  — reverse proxy (Caddy/nginx) handles auth, ttyd uses --auth-header
+#                              Fixes iOS/Safari WebSocket bug with ttyd's built-in basic auth.
+#   2. TTYD_USER + TTYD_PASS — ttyd's built-in basic auth (broken on iOS/Safari WebKit browsers)
+#   3. TTYD_NO_AUTH=true     — no auth (only safe behind VPN/firewall)
+if [[ "${TTYD_AUTH_PROXY:-}" == "true" ]]; then
+  # Proxy handles auth; ttyd trusts the X-Auth-User header from the proxy.
+  # ttyd skips its own auth when --auth-header is set.
+  TTYD_ARGS+=("--auth-header" "X-Auth-User")
+  echo "ttyd: auth delegated to reverse proxy (--auth-header X-Auth-User)"
+elif [[ "${TTYD_NO_AUTH:-}" == "true" && -n "${TTYD_USER:-}" && -n "${TTYD_PASS:-}" ]]; then
   echo "ttyd: ERROR - conflicting auth config: TTYD_NO_AUTH=true set while TTYD_USER/TTYD_PASS are also configured. Unset TTYD_NO_AUTH or remove credentials."
   exit 1
 elif [[ -n "${TTYD_USER:-}" && -n "${TTYD_PASS:-}" ]]; then
   TTYD_ARGS+=("--credential" "${TTYD_USER}:${TTYD_PASS}")
-  echo "ttyd: basic auth enabled for user '${TTYD_USER}'"
+  echo "ttyd: basic auth enabled for user '${TTYD_USER}' (WARNING: broken on iOS/Safari — use TTYD_AUTH_PROXY=true with Caddy instead)"
 elif [[ "${TTYD_NO_AUTH:-}" == "true" ]]; then
   echo "ttyd: WARNING - unauthenticated access enabled (TTYD_NO_AUTH=true)"
 else

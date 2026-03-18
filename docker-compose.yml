@@ -29,6 +29,8 @@ x-base: &base
     # ttyd tuning — set TTYD_RECONNECT=0 to disable auto-reconnect
     TTYD_RECONNECT: ${TTYD_RECONNECT:-}
     TTYD_PING_INTERVAL: ${TTYD_PING_INTERVAL:-30}
+    # Auth proxy mode — delegate auth to Caddy/nginx (fixes iOS/Safari WebSocket bug)
+    TTYD_AUTH_PROXY: ${TTYD_AUTH_PROXY:-}
     # LAN CA certificate (e.g. Caddy internal TLS root)
     CLIDE_CA_URL: ${CLIDE_CA_URL:-}
   # Drop all capabilities then re-add only what entrypoint + firewall need.
@@ -73,11 +75,19 @@ services:
     command: []
     ports:
       - "${CLIDE_BIND:-0.0.0.0}:${TTYD_PORT:-7681}:7681"
+    networks:
+      - default
+      - caddy
     labels:
       # Caddy Docker Proxy labels (only active if on caddy network)
       caddy: ${CADDY_HOSTNAME:-clide.lan.wubi.sh}
       caddy.tls: ${CADDY_TLS:-internal}
       caddy.reverse_proxy: "{{upstreams 7681}}"
+      # To add Caddy basic auth (fixes iOS/Safari WebSocket bug), add to override:
+      #   caddy.basic_auth: "*"
+      #   caddy.basic_auth.USER: "$$2a$$14$$HASH..."  (double $$ for compose escaping)
+      # Generate hash: docker exec caddy caddy hash-password --plaintext <pass>
+      # Also set TTYD_AUTH_PROXY=true in .env
 
   # Interactive shell — all three CLIs available (claude config pre-seeded)
   shell:
