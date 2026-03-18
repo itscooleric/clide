@@ -83,6 +83,7 @@ services:
       caddy: ${CADDY_HOSTNAME:-clide.lan.wubi.sh}
       caddy.tls: ${CADDY_TLS:-internal}
       caddy.reverse_proxy: "{{upstreams 7681}}"
+      caddy.reverse_proxy.header_up: "X-Auth-User {http.auth.user.id}"
       # To add Caddy basic auth (fixes iOS/Safari WebSocket bug), add to override:
       #   caddy.basic_auth: "*"
       #   caddy.basic_auth.USER: "$$2a$$14$$HASH..."  (double $$ for compose escaping)
