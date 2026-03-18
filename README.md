@@ -113,7 +113,7 @@ codex auth login --auth device
 
 ### tmux — multi-pane workflows
 
-`tmux` is installed in the container and enabled by default in the **web terminal**. Every browser tab attaches to the same named session (`main`), so refreshing the page re-attaches rather than spawning a fresh shell. The web terminal auto-reconnects after network drops (3s default, configurable via `TTYD_RECONNECT`).
+`tmux` is installed in the container and enabled by default in the **web terminal**. Every browser tab attaches to the same named session (`main`), so refreshing the page re-attaches rather than spawning a fresh shell. The web terminal auto-reconnects after network drops (10s default, configurable via `TTYD_RECONNECT`). The WebSocket ping interval (`TTYD_PING_INTERVAL`, default 30s) is tuned for mobile browsers that may pause connections during tab switches or screen lock.
 
 For `make shell` / `./clide shell`, tmux is **opt-in** to avoid breaking existing workflows:
 ```env

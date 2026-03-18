@@ -42,7 +42,8 @@ TTYD_ARGS=(
   "--writable"
   "--port" "${TTYD_PORT:-7681}"
   "--base-path" "${TTYD_BASE_PATH:-/}"
-  "--client-option" "reconnect=${TTYD_RECONNECT:-3}"
+  "--client-option" "reconnect=${TTYD_RECONNECT:-10}"
+  "--ping-interval" "${TTYD_PING_INTERVAL:-30}"
 )
 
 # Wire gh as git credential helper so git push/fetch work without token embedding.

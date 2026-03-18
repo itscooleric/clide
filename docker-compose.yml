@@ -26,6 +26,9 @@ x-base: &base
     # Intercepting proxy — capture full HTTP(S) requests/responses (v4)
     CLIDE_INTERCEPT: ${CLIDE_INTERCEPT:-0}
     CLIDE_INTERCEPT_BODIES: ${CLIDE_INTERCEPT_BODIES:-0}
+    # ttyd tuning — reconnect delay and ping interval (seconds)
+    TTYD_RECONNECT: ${TTYD_RECONNECT:-10}
+    TTYD_PING_INTERVAL: ${TTYD_PING_INTERVAL:-30}
     # LAN CA certificate (e.g. Caddy internal TLS root)
     CLIDE_CA_URL: ${CLIDE_CA_URL:-}
   # Drop all capabilities then re-add only what entrypoint + firewall need.
