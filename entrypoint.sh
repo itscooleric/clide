@@ -42,9 +42,16 @@ TTYD_ARGS=(
   "--writable"
   "--port" "${TTYD_PORT:-7681}"
   "--base-path" "${TTYD_BASE_PATH:-/}"
-  "--client-option" "reconnect=${TTYD_RECONNECT:-10}"
   "--ping-interval" "${TTYD_PING_INTERVAL:-30}"
 )
+
+# ttyd 1.7.7 auto-reconnects by default. The "reconnect" client option is a
+# DISABLE flag — any truthy value turns reconnect OFF. Only add it when the
+# user explicitly wants to disable auto-reconnect.
+if [[ "${TTYD_RECONNECT:-}" == "0" || "${TTYD_RECONNECT:-}" == "false" ]]; then
+  TTYD_ARGS+=("--client-option" "reconnect=1")
+  echo "ttyd: auto-reconnect disabled (TTYD_RECONNECT=${TTYD_RECONNECT})"
+fi
 
 # Wire gh as git credential helper so git push/fetch work without token embedding.
 # Run as clide (user-scoped config); best-effort so missing GH_TOKEN doesn't block startup.
