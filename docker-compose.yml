@@ -16,7 +16,7 @@ x-base: &base
     GITLAB_HOST: ${GITLAB_HOST:-}
     # Session logging (v4: Agent Observability)
     CLIDE_LOG_DISABLED: ${CLIDE_LOG_DISABLED:-}
-    CLIDE_MAX_SESSIONS: ${CLIDE_MAX_SESSIONS:-30}
+    CLIDE_MAX_SESSIONS: ${CLIDE_MAX_SESSIONS:-0}
     # Push notifications via ntfy (v4: Agent Observability)
     CLIDE_NTFY_URL: ${CLIDE_NTFY_URL:-}
     CLIDE_NTFY_TOPIC: ${CLIDE_NTFY_TOPIC:-clide}

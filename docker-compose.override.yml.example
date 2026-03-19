@@ -20,7 +20,8 @@ services:
       - default
       - caddy
     labels: !override
-      caddy: "http://your-hostname:80"
+      caddy: ${CADDY_TTYD_DOMAIN:-clide.example.com}
+      caddy.tls: internal
       caddy.basic_auth: "*"
       caddy.basic_auth.admin: "$$2a$$14$$YOUR_HASH_HERE"
       caddy.reverse_proxy: "{{upstreams 7681}}"

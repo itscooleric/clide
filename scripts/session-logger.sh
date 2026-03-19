@@ -21,7 +21,7 @@
 #
 # Environment:
 #   CLIDE_LOG_DIR         — log root (default: /workspace/.clide/logs)
-#   CLIDE_MAX_SESSIONS    — retention limit (default: 30)
+#   CLIDE_MAX_SESSIONS    — retention limit (default: 0 = unlimited, no pruning)
 #   CLIDE_LOG_DISABLED    — set to 1 to disable logging entirely
 #   CLIDE_RAW_TRANSCRIPT  — set to 1 to also capture raw PTY via `script`
 
@@ -30,7 +30,7 @@ set -euo pipefail
 # ── Configuration ─────────────────────────────────────────────────
 
 LOG_DIR="${CLIDE_LOG_DIR:-/workspace/.clide/logs}"
-MAX_SESSIONS="${CLIDE_MAX_SESSIONS:-30}"
+MAX_SESSIONS="${CLIDE_MAX_SESSIONS:-0}"
 SCHEMA_VERSION=1
 
 # Skip logging entirely if disabled or if command is a no-op (e.g. entrypoint pre-seed)
@@ -117,6 +117,10 @@ print(json.dumps(event))
 # ── Log retention ─────────────────────────────────────────────────
 
 prune_sessions() {
+  # Default: no pruning (MAX_SESSIONS=0 means unlimited).
+  # Session data is research-critical and must never be auto-deleted.
+  # If disk space is a concern, notify the user — don't silently prune.
+  if [[ "${MAX_SESSIONS}" -le 0 ]]; then return; fi
   if [[ ! -d "${LOG_DIR}" ]]; then return; fi
 
   local sessions
