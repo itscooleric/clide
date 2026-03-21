@@ -364,3 +364,11 @@ The venv is at `/opt/pyenv`; `pip`, `pytest`, and `ruff` are all directly callab
 `safe.directory = *` is pre-configured in the clide user's gitconfig at image build time. Volume-mounted repos cloned from GitHub are often owned by the host UID rather than `clide:1000`, which normally causes git to refuse to operate with a "detected dubious ownership" error. This is eliminated entirely — `git status`, `git log`, and all other git operations work from the first prompt without any `git config` boilerplate.
 
 > **Security note:** `safe.directory = *` trusts all directories unconditionally. This is appropriate for a single-user dev sandbox where you control what gets mounted, but it means git will operate in any directory regardless of ownership. If you share the container or mount untrusted paths, consider replacing `*` with the specific paths you use (e.g. `/workspace`).
+
+## Ecosystem
+
+| Project | What |
+|---------|------|
+| **clide** | CLI Development Environment (you are here) |
+| [clidesdale](https://github.com/itscooleric/clidesdale) | CLI client — SSH access to remote VPSes for agents |
+| [clidestable](https://github.com/itscooleric/clidestable) | VPS-side server — dashboard, stall management, split terminal view |
