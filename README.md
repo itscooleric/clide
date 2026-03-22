@@ -8,7 +8,7 @@
   ██      ██      ██ ██   ██ ██
    ██████ ███████ ██ ██████  ███████
 
-  sandboxed agentic terminal        v4
+  sandboxed agentic terminal        v5
   ──────────────────────────────────────
 
   your project ──bind mount──► /workspace
@@ -44,10 +44,11 @@ Dockerized CLI toolkit — [Claude Code](https://www.anthropic.com/claude/code),
 ## Prerequisites
 
 - Docker + Docker Compose
-- A GitHub fine-grained PAT with the **"Copilot Requests"** permission
+- A GitHub fine-grained PAT with **"Copilot Requests"** + **"Contents: Read/Write"** permissions
   - Create one at: https://github.com/settings/personal-access-tokens/new
-- Claude Code authentication (optional, choose one):
-  - **OAuth token** (recommended) — uses your Claude Pro/Max subscription limits
+- Claude Code authentication (choose one):
+  - **Interactive login** (recommended) — run `claude /login` inside the container
+  - **OAuth token** — pre-configure in `.env` for headless/CI setups
   - **Anthropic API key** — uses pay-per-use API credits
 
 ## Included CLIs
@@ -62,30 +63,30 @@ Dockerized CLI toolkit — [Claude Code](https://www.anthropic.com/claude/code),
 
 ### Claude Code authentication
 
-Two auth methods are supported. **Do not set both** — if both are present, the OAuth token takes priority and the API key is ignored.
+#### Option 1: Interactive login (recommended)
 
-#### Option 1: OAuth token (recommended for subscription users)
-
-Uses your Claude Pro/Max subscription limits — no API credits consumed. Generate a token on any machine with a browser:
+Start the container, then from the bash session:
 ```bash
-claude setup-token
+claude /login
 ```
-This produces a long-lived token (valid for 1 year). Add it to `.env`:
+This opens an OAuth flow and stores credentials persistently in `/workspace/.clide/`. Works with Claude Pro/Max subscriptions — no API credits consumed.
+
+#### Option 2: Pre-configured auth via `.env` (headless / CI)
+
+For headless setups, set **one** of these in `.env`. Do not set both — OAuth takes priority.
+
 ```env
+# OAuth token (subscription) — generate with `claude /login` on any machine
 CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-xxxxx
-```
 
-#### Option 2: Anthropic API key
-
-Uses pay-per-use API credits. Create a key at https://console.anthropic.com/settings/keys and add to `.env`:
-```env
-ANTHROPIC_API_KEY=sk-ant-xxxxx
+# OR: Anthropic API key (pay-per-use credits)
+# ANTHROPIC_API_KEY=sk-ant-xxxxx
 ```
 
 ### Claude startup behavior
 
-- The container entrypoint (`/usr/local/bin/claude-entrypoint.sh`) pre-seeds Claude config to avoid repeated first-run setup prompts. Just type `claude` from any shell.
-- To authenticate interactively, run `claude /login` from the bash session. Auth subcommands bypass session-logger and run directly.
+- Both the web terminal (`entrypoint.sh`) and CLI service (`claude-entrypoint.sh`) pre-seed Claude config at startup to skip first-run prompts. Just type `claude` from any shell.
+- To authenticate, run `claude /login` from the bash session. Auth subcommands (`/login`, `/logout`, `auth`, `setup-token`) bypass session-logger and run the binary directly.
 - Set `CLAUDE_CODE_SIMPLE=1` in `.env` if you prefer simplified (non-TUI) output.
 
 ### Codex CLI (OpenAI) authentication
@@ -147,11 +148,26 @@ CLIDE_TMUX=1
    # GIT_COMMITTER_EMAIL=you@users.noreply.github.com
    ```
 
-2. (Optional) Enable web terminal authentication:
+2. Configure web terminal authentication (required — choose one):
+
+   **a) Built-in basic auth** (simplest, but broken on iOS/Safari):
    ```env
    TTYD_USER=admin
    TTYD_PASS=changeme
    ```
+
+   **b) Reverse proxy auth** (recommended for mobile — requires Caddy):
+   ```env
+   TTYD_AUTH_PROXY=true
+   ```
+   See [`DEPLOY.md`](./DEPLOY.md) for Caddy setup.
+
+   **c) No auth** (only safe behind VPN/firewall):
+   ```env
+   TTYD_NO_AUTH=true
+   ```
+
+   > Setting conflicting options (e.g. both `TTYD_NO_AUTH` and `TTYD_USER`) causes a startup error.
 
 3. Build the image:
    ```bash
@@ -192,12 +208,15 @@ See [`DEPLOY.md`](./DEPLOY.md) for Caddy Docker Proxy integration. Uses `docker-
 
 ## Session logging
 
-Every agent session is automatically logged with structured events and a raw terminal transcript. Typing `claude`, `codex`, or `copilot` in any shell goes through `session-logger.sh` automatically.
+Every agent session is automatically logged with structured events, conversation capture, and token/cost tracking. Typing `claude`, `codex`, or `copilot` in any shell goes through `session-logger.sh` automatically.
 
 ```text
-/workspace/.clide/logs/<session_id>/
-  events.jsonl        — structured JSONL events (start, end, errors)
-  transcript.txt.gz   — compressed raw terminal I/O
+/workspace/.clide/logs/clide-YYYYMMDD-HHMMSS-xxxxxxxx/
+  events.jsonl        — structured JSONL events (start, end with token counts)
+  conversation.jsonl  — Claude Code's native conversation log (copied)
+  intercept.jsonl     — HTTP(S) intercept log (if CLIDE_INTERCEPT=1)
+  egress.jsonl        — outbound connection log (if CLIDE_EGRESS_AUDIT=1)
+  transcript.raw.gz   — raw VT100 stream (opt-in: CLIDE_RAW_TRANSCRIPT=1)
 ```
 
 All logged output is scrubbed for secrets (API keys, tokens, passwords) before writing. See [`docs/schema/session-events-v1.md`](./docs/schema/session-events-v1.md) for the event format.
@@ -205,7 +224,47 @@ All logged output is scrubbed for secrets (API keys, tokens, passwords) before w
 | Env var | Default | Description |
 |---------|---------|-------------|
 | `CLIDE_LOG_DISABLED` | _(empty)_ | Set to `1` to disable logging |
-| `CLIDE_MAX_SESSIONS` | `30` | Max sessions retained (oldest pruned on new session) |
+| `CLIDE_MAX_SESSIONS` | `0` | Max sessions retained — `0` = unlimited (no auto-pruning) |
+| `CLIDE_RAW_TRANSCRIPT` | _(empty)_ | Set to `1` to capture raw PTY via `script` |
+
+## Egress auditing and interception
+
+### Egress audit
+
+Log all outbound TCP connections (IP, host, port, verdict) for security analysis:
+```env
+CLIDE_EGRESS_AUDIT=1
+```
+Writes per-session `egress.jsonl`.
+
+### Intercepting proxy (MITM)
+
+Full HTTP(S) request/response capture using mitmproxy:
+```env
+CLIDE_INTERCEPT=1
+CLIDE_INTERCEPT_BODIES=1   # also capture bodies (large!)
+```
+Writes per-session `intercept.jsonl`. Secrets in headers are auto-redacted. See [`docs/observability.md`](./docs/observability.md) for details.
+
+## Container monitoring
+
+The resource poller runs in the background, polling every 30s for CPU, memory, PIDs, file descriptors, zombies, and ttyd connection count. It also tracks web terminal session open/close events.
+
+```text
+/workspace/.clide/metrics/
+  current.json        — latest snapshot (for Clem or external consumption)
+  metrics.jsonl       — append-only time series
+  session_events.jsonl — ttyd connection open/close events
+```
+
+| Env var | Default | Description |
+|---------|---------|-------------|
+| `CLIDE_METRICS_DISABLED` | _(empty)_ | Set to `1` to disable monitoring |
+| `CLIDE_POLL_INTERVAL` | `30` | Polling interval in seconds |
+
+### Web terminal auto-recovery
+
+If ttyd crashes, the container automatically restarts it with exponential backoff (max 5 rapid restarts within 5 minutes). Clean shutdowns (`docker stop`) exit gracefully without restart attempts.
 
 ## Push notifications (ntfy)
 
@@ -243,12 +302,13 @@ The cert is downloaded and installed on each container start. If the download fa
 | [`SECURITY.md`](./SECURITY.md) | Threat model, trust boundaries, attack surface, hardening recommendations |
 | [`RUNBOOK.md`](./RUNBOOK.md) | Operational runbook — health checks, logs, rebuilds, credential rotation, troubleshooting |
 | [`DEPLOY.md`](./DEPLOY.md) | Production deployment with Caddy reverse proxy |
+| [`docs/observability.md`](./docs/observability.md) | Agent observability — session logging, token tracking, egress audit, intercept proxy |
 | [`docs/schema/session-events-v1.md`](./docs/schema/session-events-v1.md) | Session event JSONL schema |
 
 ## Notes
 
-- Tokens don't expire unless you set an expiry — set them once in `.env` and you're done. OAuth tokens from `claude setup-token` are valid for 1 year.
 - `.env` is gitignored. Don't commit it.
+- Credentials set via `claude /login` persist in `/workspace/.clide/` across container restarts.
 - To rebuild with latest CLI versions:
   ```bash
   docker compose build --no-cache

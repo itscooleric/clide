@@ -23,7 +23,11 @@ curl -f http://localhost:7681/
 
 ### Check container resource usage
 ```bash
+# Docker stats (external)
 docker stats clide-web-1
+
+# clide metrics snapshot (from inside container or via docker exec)
+docker compose exec web cat /workspace/.clide/metrics/current.json
 ```
 
 ---
@@ -105,11 +109,16 @@ docker compose build
    docker compose down && docker compose up -d web
    ```
 
-### Rotate Claude OAuth token (`CLAUDE_CODE_OAUTH_TOKEN`)
-1. On a machine with a browser, run:
+### Rotate Claude authentication
+**Option A — Interactive (recommended):**
+1. In a running container shell, run:
    ```bash
-   claude setup-token
+   claude /login
    ```
+2. Follow the OAuth flow. Credentials persist in `/workspace/.clide/`.
+
+**Option B — Headless via `.env`:**
+1. On a machine with a browser, run `claude /login` and copy the token.
 2. Update `CLAUDE_CODE_OAUTH_TOKEN` in `.env`.
 3. Restart — no rebuild required.
 
@@ -167,11 +176,18 @@ Remember to remove `CLIDE_FIREWALL=0` once done.
 3. Check logs: `docker compose logs web`
 
 ### Browser shows 401 Unauthorized
-- `TTYD_USER` and `TTYD_PASS` are required. Check they are set in `.env`.
+- Web terminal authentication is required. Set one of: `TTYD_USER`+`TTYD_PASS`, `TTYD_AUTH_PROXY=true`, or `TTYD_NO_AUTH=true`.
 - If you intentionally want no auth: set `TTYD_NO_AUTH=true` in `.env`.
 
 ### Session disappeared / tmux session lost
 The web terminal always attaches to a named tmux session (`main`). If the container restarted, the session is gone. Refresh the browser to start a new one.
+
+### ttyd crashed / web terminal unresponsive
+ttyd auto-restarts with exponential backoff (max 5 rapid restarts). Check logs:
+```bash
+docker compose logs web | grep "ttyd:"
+```
+If you see "FATAL — crashed 5 times", the underlying issue needs investigation. Common causes: port conflict, OOM kill, corrupted tmux socket.
 
 ### Claude prompts for setup on every run
 The entrypoint pre-seeds `~/.claude.json` to suppress first-run prompts. If they keep appearing:

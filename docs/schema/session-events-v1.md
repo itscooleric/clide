@@ -33,7 +33,15 @@ Emitted when the agent session exits.
 |-------|------|-------------|
 | `agent` | string | Same as session_start |
 | `exit_code` | int | Process exit code |
-| `outcome` | string | `success` or `error` |
+| `outcome` | string | `success`, `error`, or `killed` |
+| `signal` | string | Signal name if killed (e.g. `INT`, `TERM`) — optional |
+| `claude_session_id` | string | Claude Code's internal session ID — optional |
+| `has_conversation` | bool | Whether conversation.jsonl was captured |
+| `input_tokens` | int | Input tokens consumed — optional |
+| `output_tokens` | int | Output tokens consumed — optional |
+| `total_tokens` | int | Total tokens — optional |
+| `estimated_cost_usd` | float | Estimated cost in USD — optional |
+| `turns` | int | Number of conversation turns — optional |
 
 ## Session Directory Layout
 
@@ -56,8 +64,8 @@ Blocklist: `GH_TOKEN`, `GITHUB_TOKEN`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`,
 
 ## Retention
 
-Configurable via `CLIDE_MAX_SESSIONS` (default: 30). Oldest sessions pruned
-on each new session start.
+Configurable via `CLIDE_MAX_SESSIONS` (default: `0` = unlimited, no auto-pruning).
+When set to a positive number, oldest sessions are pruned on each new session start.
 
 ## Notifications
 
@@ -70,7 +78,7 @@ when `CLIDE_NTFY_URL` is configured. Notifications are fire-and-forget
 | Env var | Default | Description |
 |---------|---------|-------------|
 | `CLIDE_LOG_DIR` | `/workspace/.clide/logs` | Log root directory |
-| `CLIDE_MAX_SESSIONS` | `30` | Max sessions to retain |
+| `CLIDE_MAX_SESSIONS` | `0` | Max sessions to retain (`0` = unlimited) |
 | `CLIDE_LOG_DISABLED` | _(empty)_ | Set to `1` to disable logging |
 | `CLIDE_NTFY_URL` | _(empty)_ | ntfy server URL |
 | `CLIDE_NTFY_TOPIC` | `clide` | ntfy topic name |
