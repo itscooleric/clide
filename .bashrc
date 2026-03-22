@@ -4,13 +4,13 @@
 # Docker ENV PATH isn't always propagated through gosu → tmux → bash.
 export PATH="/home/clide/.local/bin:/opt/pyenv/bin:${PATH}"
 
-# Make workspace Python tools (sdale, clidetext) importable without pip install.
-# These are on the bind-mounted workspace so they stay current across rebuilds.
-for _tool_dir in /workspace/clide-sdale /workspace/clidetext; do
-  [[ -d "$_tool_dir" ]] && PYTHONPATH="${PYTHONPATH:+${PYTHONPATH}:}${_tool_dir}"
+# Source workspace addon activators — lets tools self-inject into the
+# shell environment without clide needing to know about them.
+# Each addon provides its own bin/activate.sh (e.g. clidesdale, clidetext).
+for _activator in /workspace/*/bin/activate.sh; do
+  [[ -f "$_activator" ]] && . "$_activator"
 done
-[[ -n "${PYTHONPATH:-}" ]] && export PYTHONPATH
-unset _tool_dir
+unset _activator
 
 # Show splash on first interactive login (web terminal / tmux session).
 # Guard with CLIDE_SPLASH_SHOWN so it only prints once per session, not on
