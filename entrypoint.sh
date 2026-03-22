@@ -109,9 +109,46 @@ if [[ "${CLIDE_INTERCEPT:-0}" == "1" ]]; then
   fi
 fi
 
+# Start resource poller in background (#45, #46, #48)
+if [[ "${CLIDE_METRICS_DISABLED:-}" != "1" && -x /usr/local/bin/resource-poller.sh ]]; then
+  gosu clide /usr/local/bin/resource-poller.sh &
+  echo "ttyd: resource poller started (PID $!)"
+fi
+
 # Drop privileges to clide before starting ttyd so the web terminal never runs as root.
 # Note: ttyd logs the credential as base64 in its startup banner. This is only visible
 # via `docker logs` (requires host access). We unset TTYD_PASS from the environment
 # so child processes (tmux, shells, agents) can't read it.
 unset TTYD_PASS
-exec gosu clide ttyd "${TTYD_ARGS[@]}" tmux new-session -A -s main
+
+# ttyd process supervision (#47) — restart on crash with backoff.
+# If ttyd exits cleanly (e.g. SIGTERM from docker stop), we exit too.
+MAX_RESTARTS=5
+RESTART_COUNT=0
+RESTART_WINDOW=300  # reset counter if ttyd runs longer than 5 min
+
+while true; do
+  START_TIME=$(date +%s)
+  gosu clide ttyd "${TTYD_ARGS[@]}" tmux new-session -A -s main
+  EXIT_CODE=$?
+
+  # Clean shutdown (SIGTERM = 143, SIGINT = 130) — propagate exit
+  if [[ $EXIT_CODE -eq 0 || $EXIT_CODE -eq 143 || $EXIT_CODE -eq 130 ]]; then
+    exit $EXIT_CODE
+  fi
+
+  ELAPSED=$(( $(date +%s) - START_TIME ))
+  if [[ $ELAPSED -ge $RESTART_WINDOW ]]; then
+    RESTART_COUNT=0
+  fi
+
+  RESTART_COUNT=$((RESTART_COUNT + 1))
+  if [[ $RESTART_COUNT -ge $MAX_RESTARTS ]]; then
+    echo "ttyd: FATAL — crashed ${MAX_RESTARTS} times in rapid succession, giving up"
+    exit 1
+  fi
+
+  BACKOFF=$((RESTART_COUNT * 2))
+  echo "ttyd: crashed (exit=${EXIT_CODE}), restarting in ${BACKOFF}s (attempt ${RESTART_COUNT}/${MAX_RESTARTS})"
+  sleep "$BACKOFF"
+done

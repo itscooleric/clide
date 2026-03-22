@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     gnupg \
     gosu \
+    iproute2 \
     iptables \
     openssh-client \
     rsync \
@@ -95,7 +96,8 @@ COPY scripts/token-cost.py /usr/local/bin/token-cost.py
 COPY scripts/egress-audit.sh /usr/local/bin/egress-audit.sh
 COPY scripts/intercept-proxy.py /usr/local/bin/intercept-proxy.py
 COPY scripts/intercept-start.sh /usr/local/bin/intercept-start.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/claude-entrypoint.sh /usr/local/bin/firewall.sh /usr/local/bin/session-logger.sh /usr/local/bin/notify.sh /usr/local/bin/token-cost.py /usr/local/bin/egress-audit.sh /usr/local/bin/intercept-start.sh /usr/local/bin/intercept-proxy.py
+COPY scripts/resource-poller.sh /usr/local/bin/resource-poller.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/claude-entrypoint.sh /usr/local/bin/firewall.sh /usr/local/bin/session-logger.sh /usr/local/bin/notify.sh /usr/local/bin/token-cost.py /usr/local/bin/egress-audit.sh /usr/local/bin/intercept-start.sh /usr/local/bin/intercept-proxy.py /usr/local/bin/resource-poller.sh
 
 # Default CLAUDE.md template — seeded into /workspace on first run if none exists
 COPY CLAUDE.md.template /usr/local/share/clide/CLAUDE.md.template
