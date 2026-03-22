@@ -120,9 +120,8 @@ if (oauthToken) {
 } else if (apiKey) {
   console.log('claude: using API key (API credits)');
 } else {
-  console.log('claude: WARNING - no authentication configured');
-  console.log('  Set CLAUDE_CODE_OAUTH_TOKEN (subscription) or ANTHROPIC_API_KEY (API credits) in .env');
-  console.log('  To generate an OAuth token: claude setup-token (on a machine with a browser)');
+  console.log('claude: no authentication pre-configured — run `claude /login` to authenticate interactively');
+  console.log('  Or set CLAUDE_CODE_OAUTH_TOKEN / ANTHROPIC_API_KEY in .env for headless auth');
 }
 NODE
 

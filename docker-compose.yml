@@ -8,7 +8,7 @@ x-base: &base
   image: clide
   env_file: .env
   environment:
-    CLAUDE_CODE_SIMPLE: ${CLAUDE_CODE_SIMPLE:-1}
+    CLAUDE_CODE_SIMPLE: ${CLAUDE_CODE_SIMPLE:-}
     CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
     CLIDE_TMUX: ${CLIDE_TMUX:-}
     OPENAI_API_KEY: ${OPENAI_API_KEY:-}

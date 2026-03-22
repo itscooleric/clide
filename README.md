@@ -85,7 +85,8 @@ ANTHROPIC_API_KEY=sk-ant-xxxxx
 ### Claude startup behavior
 
 - The container entrypoint (`/usr/local/bin/claude-entrypoint.sh`) pre-seeds Claude config to avoid repeated first-run setup prompts. Just type `claude` from any shell.
-- `CLAUDE_CODE_SIMPLE=1` is set by default for predictable container startup. Override in `.env` if you prefer the full TUI.
+- To authenticate interactively, run `claude /login` from the bash session. Auth subcommands bypass session-logger and run directly.
+- Set `CLAUDE_CODE_SIMPLE=1` in `.env` if you prefer simplified (non-TUI) output.
 
 ### Codex CLI (OpenAI) authentication
 
