@@ -8,6 +8,7 @@ export PATH="/home/clide/.local/bin:/opt/pyenv/bin:${PATH}"
 # shell environment without clide needing to know about them.
 # Each addon provides its own bin/activate.sh (e.g. clidesdale, clidetext).
 for _activator in /workspace/*/bin/activate.sh; do
+  # shellcheck disable=SC1090
   [[ -f "$_activator" ]] && . "$_activator"
 done
 unset _activator
