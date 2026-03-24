@@ -8,7 +8,7 @@ x-base: &base
   image: clide
   env_file: .env
   environment:
-    CLAUDE_CODE_SIMPLE: ${CLAUDE_CODE_SIMPLE:-1}
+    CLAUDE_CODE_SIMPLE: ${CLAUDE_CODE_SIMPLE:-}
     CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
     CLIDE_TMUX: ${CLIDE_TMUX:-}
     OPENAI_API_KEY: ${OPENAI_API_KEY:-}
@@ -33,6 +33,9 @@ x-base: &base
     TTYD_AUTH_PROXY: ${TTYD_AUTH_PROXY:-}
     # LAN CA certificate (e.g. Caddy internal TLS root)
     CLIDE_CA_URL: ${CLIDE_CA_URL:-}
+    # Container monitoring (v5: #45-48)
+    CLIDE_METRICS_DISABLED: ${CLIDE_METRICS_DISABLED:-}
+    CLIDE_POLL_INTERVAL: ${CLIDE_POLL_INTERVAL:-30}
   # Drop all capabilities then re-add only what entrypoint + firewall need.
   # NET_ADMIN  — iptables egress rules (set CLIDE_FIREWALL=0 to disable)
   # SETUID/GID — gosu privilege drop from root → clide

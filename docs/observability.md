@@ -1,4 +1,4 @@
-# Agent Observability — v4
+# Agent Observability — v4/v5
 
 Clide's observability stack provides layered visibility into what AI agents do during sessions.
 
@@ -10,6 +10,7 @@ Clide's observability stack provides layered visibility into what AI agents do d
 | **Token tracking** | Token counts + estimated USD cost per session | Always on | `session_end` event fields |
 | **Egress audit** | All outbound TCP connections (IP, host, port) | `CLIDE_EGRESS_AUDIT=1` | `egress.jsonl` |
 | **Intercept proxy** | Full HTTP(S) request/response capture (MITM) | `CLIDE_INTERCEPT=1` | `intercept.jsonl` |
+| **Container monitoring** | CPU, memory, PIDs, FDs, ttyd connections | Always on | `current.json`, `metrics.jsonl` |
 | **Leakage test** | Verify agents don't send gitignored secrets | Manual | `tests/leakage/` |
 
 ## Session Logging (always on)
@@ -50,20 +51,23 @@ Session IDs use a human-readable datetime format: `clide-20260318-143022-d85a5cd
   "exit_code": 0,
   "outcome": "success",
   "has_conversation": true,
-  "input_tokens": 1207,
-  "output_tokens": 145398,
-  "total_tokens": 159673999,
-  "estimated_cost_usd": 343.23,
-  "turns": 659
+  "input_tokens": 120700,
+  "output_tokens": 45398,
+  "total_tokens": 166098,
+  "estimated_cost_usd": 1.04,
+  "turns": 42
 }
 ```
 
 ### Token pricing
-| Model | Input ($/M) | Output ($/M) | Cache Write ($/M) | Cache Read ($/M) |
-|-------|-------------|--------------|-------------------|------------------|
-| Claude Opus 4 | $15 | $75 | $18.75 | $1.50 |
-| Claude Sonnet 4 | $3 | $15 | $3.75 | $0.30 |
-| Claude Haiku 3.5 | $0.80 | $4 | $1 | $0.08 |
+
+Pricing is embedded in `scripts/token-cost.py` and used for `estimated_cost_usd`. Update the script when Anthropic changes pricing. Current rates (as of 2026-03):
+
+| Model | Input ($/M) | Output ($/M) |
+|-------|-------------|--------------|
+| Claude Opus 4 | $15 | $75 |
+| Claude Sonnet 4 | $3 | $15 |
+| Claude Haiku 3.5 | $0.80 | $4 |
 
 Standalone usage: `python3 scripts/token-cost.py conversation.jsonl`
 
@@ -133,13 +137,7 @@ CLIDE_INTERCEPT_BODIES=1
 
 ### MITM certificate trust
 
-mitmproxy generates a CA certificate at `~/.mitmproxy/mitmproxy-ca-cert.pem` on first run. For HTTPS interception to work, agent tools must trust this CA. Most Python-based tools (Claude Code's node runtime, pip) respect `HTTPS_PROXY` and handle this automatically via mitmproxy's `ssl_insecure` flag.
-
-If you need to install the CA system-wide in the container:
-```bash
-cp ~/.mitmproxy/mitmproxy-ca-cert.pem /usr/local/share/ca-certificates/mitmproxy.crt
-update-ca-certificates
-```
+The intercept proxy runs with `ssl_insecure=True`, which disables upstream certificate verification. This means agent tools don't need to trust mitmproxy's CA — HTTPS interception works out of the box without installing extra certificates.
 
 ### Secret redaction
 
@@ -149,6 +147,49 @@ The proxy auto-redacts these patterns in logged headers and bodies:
 - `ghp_`, `github_pat_` (GitHub tokens)
 - `glpat-` (GitLab tokens)
 - `Bearer ` (auth headers)
+
+## Container Monitoring (v5)
+
+Background resource poller reads `/proc` + cgroup v2 data every 30s.
+
+### Outputs
+
+```
+/workspace/.clide/metrics/
+  current.json         — latest snapshot (atomic writes via tmp+mv)
+  metrics.jsonl        — append-only time series
+  session_events.jsonl — ttyd connection open/close events
+```
+
+### current.json format
+```json
+{
+  "ts": "2026-03-22T10:00:00.000Z",
+  "uptime_seconds": 84600,
+  "cpu_percent": 12.4,
+  "mem_used_mb": 320,
+  "mem_limit_mb": 4096,
+  "pids": 42,
+  "open_fds": 128,
+  "zombies": 0,
+  "ttyd_connections": 1
+}
+```
+
+### ttyd session tracking
+
+Polls `ss` for TCP connections on the ttyd port. Emits `session_open` / `session_close` events when connections appear or disappear.
+
+### ttyd process supervision
+
+If ttyd crashes, the entrypoint restarts it with exponential backoff (2s, 4s, 6s...). After 5 rapid crashes within 5 minutes, it gives up. Clean shutdowns (SIGTERM/SIGINT from `docker stop`) propagate without restart.
+
+### Configuration
+
+| Env var | Default | Description |
+|---------|---------|-------------|
+| `CLIDE_METRICS_DISABLED` | _(empty)_ | Set to `1` to disable monitoring |
+| `CLIDE_POLL_INTERVAL` | `30` | Polling interval in seconds |
 
 ## Leakage Verification
 
@@ -172,7 +213,7 @@ The egress firewall (`firewall.sh`) restricts outbound traffic to a known allowl
 | api.githubcopilot.com | GitHub Copilot |
 | api.openai.com, auth.openai.com | Codex CLI |
 | registry.npmjs.org | npm packages |
-| objects/raw/uploads.githubusercontent.com | git operations |
+| objects.githubusercontent.com, raw.githubusercontent.com | git operations |
 
 Add custom hosts: `CLIDE_ALLOWED_HOSTS=example.com,other.com`
 Disable entirely: `CLIDE_FIREWALL=0`

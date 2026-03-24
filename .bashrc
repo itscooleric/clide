@@ -8,6 +8,7 @@ export PATH="/home/clide/.local/bin:/opt/pyenv/bin:${PATH}"
 # shell environment without clide needing to know about them.
 # Each addon provides its own bin/activate.sh (e.g. clidesdale, clidetext).
 for _activator in /workspace/*/bin/activate.sh; do
+  # shellcheck disable=SC1090
   [[ -f "$_activator" ]] && . "$_activator"
 done
 unset _activator
@@ -36,8 +37,14 @@ fi
 
 # Wrap agent CLIs through session-logger for structured logging + notifications.
 # Disable with CLIDE_LOG_DISABLED=1 in .env.
+# Auth/setup subcommands bypass session-logger — they aren't agent sessions.
 if command -v session-logger.sh >/dev/null 2>&1 && [[ "${CLIDE_LOG_DISABLED:-}" != "1" ]]; then
-  claude()  { session-logger.sh claude "$@"; }
+  claude() {
+    case "${1:-}" in
+      /login|/logout|login|logout|auth|setup-token) command claude "$@" ;;
+      *) session-logger.sh claude "$@" ;;
+    esac
+  }
   codex()   { session-logger.sh codex "$@"; }
   copilot() { session-logger.sh copilot "$@"; }
 fi
