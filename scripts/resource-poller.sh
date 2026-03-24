@@ -117,12 +117,12 @@ read_pids() {
     return
   fi
   # Fallback: count /proc/[0-9]* directories
-  ls -1d /proc/[0-9]* 2>/dev/null | wc -l
+  find /proc -maxdepth 1 -regex '/proc/[0-9]+' -type d 2>/dev/null | wc -l
 }
 
 read_fds() {
   # Count open file descriptors for the whole cgroup / container
-  ls /proc/self/fd 2>/dev/null | wc -l
+  find /proc/self/fd -maxdepth 1 2>/dev/null | wc -l
 }
 
 read_zombies() {
