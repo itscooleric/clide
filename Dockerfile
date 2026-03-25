@@ -97,7 +97,8 @@ COPY scripts/egress-audit.sh /usr/local/bin/egress-audit.sh
 COPY scripts/intercept-proxy.py /usr/local/bin/intercept-proxy.py
 COPY scripts/intercept-start.sh /usr/local/bin/intercept-start.sh
 COPY scripts/resource-poller.sh /usr/local/bin/resource-poller.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/claude-entrypoint.sh /usr/local/bin/firewall.sh /usr/local/bin/session-logger.sh /usr/local/bin/notify.sh /usr/local/bin/token-cost.py /usr/local/bin/egress-audit.sh /usr/local/bin/intercept-start.sh /usr/local/bin/intercept-proxy.py /usr/local/bin/resource-poller.sh
+COPY scripts/scrub-jsonl.py /usr/local/bin/scrub-jsonl.py
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/claude-entrypoint.sh /usr/local/bin/firewall.sh /usr/local/bin/session-logger.sh /usr/local/bin/notify.sh /usr/local/bin/token-cost.py /usr/local/bin/egress-audit.sh /usr/local/bin/intercept-start.sh /usr/local/bin/intercept-proxy.py /usr/local/bin/resource-poller.sh /usr/local/bin/scrub-jsonl.py
 
 # Default CLAUDE.md template — seeded into /workspace on first run if none exists
 COPY CLAUDE.md.template /usr/local/share/clide/CLAUDE.md.template
