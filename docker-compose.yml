@@ -36,6 +36,13 @@ x-base: &base
     # Container monitoring (v5: #45-48)
     CLIDE_METRICS_DISABLED: ${CLIDE_METRICS_DISABLED:-}
     CLIDE_POLL_INTERVAL: ${CLIDE_POLL_INTERVAL:-30}
+    # Model selection (corral Phase 0: #102)
+    # ANTHROPIC_MODEL — main session model (e.g. sonnet, opus, claude-sonnet-4-6)
+    # CLAUDE_CODE_SUBAGENT_MODEL — model for Agent tool subagents
+    # Set in .env for container-wide default; override per-window with export or --model flag.
+    # Operators default to Sonnet; Boss/Lead override to Opus per-window.
+    ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-}
+    CLAUDE_CODE_SUBAGENT_MODEL: ${CLAUDE_CODE_SUBAGENT_MODEL:-}
   # Drop all capabilities then re-add only what entrypoint + firewall need.
   # NET_ADMIN  — iptables egress rules (set CLIDE_FIREWALL=0 to disable)
   # SETUID/GID — gosu privilege drop from root → clide
