@@ -1,5 +1,12 @@
 .env
 docker-compose.override.yml
+*.crt
+*.key
+*.pem
+__pycache__/
+*.pyc
+.DS_Store
+node_modules/
 
 # Session logs (generated at runtime inside workspace)
 .clide/logs/
