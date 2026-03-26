@@ -56,6 +56,18 @@ else
   gosu clide ln -s "$CLIDE_DIR" "$HOME_DIR/.claude"
 fi
 
+# Install workspace Python projects into the pyenv venv so they're available as
+# proper CLI commands without PYTHONPATH hacks (#92). Runs as clide since the
+# venv is user-owned. Editable install (-e) so live code changes take effect
+# immediately. Zero-dep packages like sdale install in <1s.
+if [[ -d /workspace/clide-sdale && -f /workspace/clide-sdale/pyproject.toml ]]; then
+  if gosu clide /opt/pyenv/bin/pip install -q --no-deps -e /workspace/clide-sdale 2>/dev/null; then
+    echo "clide: installed sdale into pyenv"
+  else
+    echo "clide: WARNING - failed to pip install sdale; falling back to PYTHONPATH activate.sh"
+  fi
+fi
+
 # Seed CLAUDE.md into the workspace if a template exists and no CLAUDE.md is present.
 # This gives every session a baseline set of instructions without overwriting user edits.
 # Template search order: /workspace/.clide/CLAUDE.md.template, then bundled default.
