@@ -1,0 +1,13 @@
+[Unit]
+Description=Mesa boot notification — ntfy ping
+After=network-online.target tailscaled.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=MESA_NTFY_TOPIC=mesa-forge-boot
+ExecStart=/usr/bin/curl -sf --max-time 10 -d "mesa booted — waiting for unlock. SSH: ssh eric@100.71.176.31" https://ntfy.sh/${MESA_NTFY_TOPIC}
+TimeoutSec=15
+
+[Install]
+WantedBy=multi-user.target
