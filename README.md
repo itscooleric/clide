@@ -214,6 +214,21 @@ See [`DEPLOY.md`](./DEPLOY.md) for Caddy Docker Proxy integration. Uses `docker-
 | [`RUNBOOK.md`](./RUNBOOK.md) | Operational runbook — health checks, logs, rebuilds, credential rotation, troubleshooting |
 | [`DEPLOY.md`](./DEPLOY.md) | Production deployment with Caddy reverse proxy |
 
+## Environment variable reference (`CLIDE_*`)
+
+All `CLIDE_*` variables that control container behavior:
+
+| Variable | Where set | Default | Description |
+|---|---|---|---|
+| `CLIDE_UID` | Build arg (`.env` or CLI) | `1000` | UID for the `clide` user inside the container. Set to `$(id -u)` to match host ownership on bind mounts. |
+| `CLIDE_GID` | Build arg (`.env` or CLI) | `1000` | GID for the `clide` group inside the container. Set to `$(id -g)` to match host ownership on bind mounts. |
+| `CLIDE_FIREWALL` | Runtime env (`.env`) | `1` (enabled) | Set to `0` to disable the iptables egress allowlist entirely. |
+| `CLIDE_ALLOWED_HOSTS` | Runtime env (`.env`) | *(empty)* | Comma- or newline-separated list of additional hostnames to allow through the egress firewall. Resolved to IPs at container startup. |
+| `CLIDE_TMUX` | Runtime env (`.env`) | *(empty/off)* | Set to `1` to wrap `make shell` / `./clide shell` in a tmux session. The web terminal always uses tmux regardless of this setting. |
+| `CLIDE_FIREWALL_DONE` | Internal (set by entrypoint) | `0` | Internal flag — set to `1` after `firewall.sh` runs to prevent duplicate iptables setup when one entrypoint calls another. Not user-facing. |
+
+**Build args** (`CLIDE_UID`, `CLIDE_GID`) are baked into the image at `docker compose build` time. **Runtime vars** take effect on container start — change them in `.env` and restart (no rebuild needed).
+
 ## Notes
 
 - Tokens don't expire unless you set an expiry — set them once in `.env` and you're done. OAuth tokens from `claude setup-token` are valid for 1 year.
