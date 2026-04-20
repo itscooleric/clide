@@ -19,12 +19,12 @@
 
 ---
 
-## Bernard/Forge Deployment (Caddy Docker Proxy)
+## Production Host Deployment (Caddy Docker Proxy)
 
 ### Prerequisites
 - Caddy Docker Proxy running
 - External Docker network `caddy` exists
-- DNS record: `clide.lan.wubi.sh` → Bernard LAN IP
+- DNS record: `clide.your-domain.example.com` → production host LAN IP
 
 ### Step 1: Create directories
 ```bash
@@ -59,7 +59,7 @@ CLAUDE_CODE_SIMPLE=1
 PROJECT_DIR=/srv/clide/projects/default
 
 # Caddy proxy settings (hostname for labels)
-CADDY_HOSTNAME=clide.lan.wubi.sh
+CADDY_HOSTNAME=clide.your-domain.example.com
 CADDY_TLS=internal
 ```
 
@@ -88,11 +88,11 @@ docker logs -n 50 clide-web-1
 ### Step 6: Validate
 From a LAN/VPN client:
 ```bash
-curl -Ik https://clide.lan.wubi.sh
+curl -Ik https://clide.your-domain.example.com
 ```
 
 Should return `200 OK`. Access the web terminal at:
-- **https://clide.lan.wubi.sh**
+- **https://clide.your-domain.example.com**
 
 ---
 
@@ -104,9 +104,9 @@ docker compose up -d web
 # Access at http://localhost:7681
 ```
 
-### Bernard deployment (proxy mode)
+### Production host deployment (proxy mode)
 - Copy `docker-compose.override.yml.example` to `docker-compose.override.yml`
-- Access at `https://clide.lan.wubi.sh`
+- Access at `https://clide.your-domain.example.com`
 - No port exposure needed (override removes it)
 
 ### Run CLIs directly (no web UI)
@@ -184,7 +184,7 @@ docker exec -it clide-web-1 ss -tulpn | grep 7681
 ```
 
 ### ttyd works locally but not via hostname
-- Verify DNS: `clide.lan.wubi.sh` resolves to Bernard IP
+- Verify DNS: `clide.your-domain.example.com` resolves to production host IP
 - Check Caddy logs: `docker logs caddy-proxy`
 - Verify labels: `docker inspect clide-web-1 --format '{{json .Config.Labels}}'`
 
@@ -218,7 +218,7 @@ sudo chown -R $USER:$USER /srv/clide/projects
 
 ## Security Notes
 
-- Default setup is **LAN/VPN-only** (`*.lan.wubi.sh`)
+- Default setup is **LAN/VPN-only** (`*.your-domain.example.com`)
 - ttyd has `--writable` enabled (allows file editing in terminal)
 - **Enable authentication** (see [Authentication](#authentication)) — ttyd basic auth and/or Caddy basicauth
 - GitHub tokens are passed via environment variables (secure for Docker)

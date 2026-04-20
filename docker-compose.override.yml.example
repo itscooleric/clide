@@ -16,7 +16,7 @@ services:
     ports: []  # Remove port exposure when using Caddy proxy
     # Uncomment labels below to enable Caddy basicauth
     # labels:
-    #   caddy: ${CADDY_HOSTNAME:-clide.lan.wubi.sh}
+    #   caddy: ${CADDY_HOSTNAME:-clide.your-domain.example.com}
     #   caddy.tls: ${CADDY_TLS:-internal}
     #   caddy.reverse_proxy: "{{upstreams 7681}}"
     #   caddy.basicauth: /*

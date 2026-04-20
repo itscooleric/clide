@@ -125,7 +125,7 @@ The Docker socket (`/var/run/docker.sock`) is intentionally **not** mounted into
 
 ## Deployment hardening recommendations
 
-For production or shared deployments (e.g. Bernard/Forge):
+For production or shared deployments (e.g. production/shared):
 
 1. **Always use TLS** — put clide behind Caddy or another TLS-terminating proxy. Never expose ttyd directly over HTTP on a public network.
 2. **Enable basic auth** — set `TTYD_USER` and `TTYD_PASS` in `.env`. Do not use `TTYD_NO_AUTH=true` in production.

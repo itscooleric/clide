@@ -203,7 +203,7 @@ PROJECT_DIR=/path/to/specific/repo docker compose run --rm shell
 
 Your project is mounted at `/workspace` inside the container.
 
-### Bernard/Forge deployment
+### Production Deployment (Caddy Reverse Proxy)
 See [`DEPLOY.md`](./DEPLOY.md) for Caddy Docker Proxy integration. Uses `docker-compose.override.yml` (gitignored) for reverse proxy config that persists across git pulls.
 
 ## Additional docs
