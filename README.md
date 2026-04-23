@@ -52,7 +52,7 @@ CLIDE captures three streams of structured data from every agent session. This i
 
 MITM proxy intercepts all traffic between the agent and its provider API. Every prompt, every completion, every tool call — captured with full request and response bodies.
 
-```
+```text
 /var/log/clide/intercept.jsonl
 ```
 
@@ -74,7 +74,7 @@ Each line is a JSON object:
 
 Every outbound network connection the agent attempts, whether allowed or blocked by the firewall.
 
-```
+```text
 /var/log/clide/egress.jsonl
 ```
 
@@ -93,7 +93,7 @@ This tells you exactly what the agent tried to reach — and whether it was perm
 
 Agent tool invocations, file edits, and shell commands are captured as structured events:
 
-```
+```text
 /var/log/clide/session-events.jsonl
 ```
 
