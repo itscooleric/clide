@@ -45,6 +45,19 @@ docker compose down
 ```
 
 ### Restart the web terminal
+
+> **WARNING: Restarting `clide-web-1` destroys all in-memory state.**
+> The `/workspace` bind mount persists across restarts — your files are safe.
+> However, everything that lives only in the container's memory is lost:
+> - **tmux sessions** (all panes, scrollback, running commands)
+> - **Running processes** (background jobs, `claude` sessions, watch loops)
+> - **Shell history** for the current session (readline history not yet flushed to disk)
+> - **Firewall rules** (re-applied automatically on next start)
+> - **Temp files** in `/tmp` (container-local filesystem, not bind-mounted)
+>
+> If operators are actively working in the web terminal, a restart will
+> kill their sessions without warning. Coordinate before restarting.
+
 ```bash
 docker compose restart web
 ```

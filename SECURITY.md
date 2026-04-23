@@ -105,9 +105,27 @@ This document describes the trust boundaries, attack surface, known threats, and
 
 ---
 
+## Docker socket is NOT mounted
+
+The Docker socket (`/var/run/docker.sock`) is intentionally **not** mounted into any clide container. This is a critical security boundary:
+
+- **Why it matters:** Mounting the Docker socket gives a container full control over the Docker daemon — it can create privileged containers, mount the host filesystem, and effectively achieve root access on the host. This is the most common container escape vector.
+- **Current state:** Neither `docker-compose.yml` nor any entrypoint script references the Docker socket. The container has no access to Docker commands or the Docker API.
+- **CI enforcement:** Any PR that adds a `/var/run/docker.sock` volume mount should be rejected. Consider adding a CI check that greps `docker-compose*.yml` and `Dockerfile` for `docker.sock` and fails the build if found:
+  ```bash
+  # Example CI guard (add to your CI pipeline)
+  if grep -r 'docker\.sock' docker-compose*.yml Dockerfile 2>/dev/null; then
+    echo "FAIL: Docker socket must never be mounted into the container"
+    exit 1
+  fi
+  ```
+- **If you need Docker-in-Docker:** Use a purpose-built DinD sidecar with its own isolated daemon rather than sharing the host socket. This is not currently supported or needed by clide.
+
+---
+
 ## Deployment hardening recommendations
 
-For production or shared deployments (e.g. Bernard/Forge):
+For production or shared deployments (e.g. production/shared):
 
 1. **Always use TLS** — put clide behind Caddy or another TLS-terminating proxy. Never expose ttyd directly over HTTP on a public network.
 2. **Enable basic auth** — set `TTYD_USER` and `TTYD_PASS` in `.env`. Do not use `TTYD_NO_AUTH=true` in production.

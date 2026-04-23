@@ -55,7 +55,7 @@ services:
       - "${TTYD_PORT:-7681}:7681"
     labels:
       # Caddy Docker Proxy labels (only active if on caddy network)
-      caddy: ${CADDY_HOSTNAME:-clide.lan.wubi.sh}
+      caddy: ${CADDY_HOSTNAME:-clide.your-domain.example.com}
       caddy.tls: ${CADDY_TLS:-internal}
       caddy.reverse_proxy: "{{upstreams 7681}}"
 
